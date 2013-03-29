@@ -15,7 +15,8 @@ LOCAL_SRC_FILES := \
 	QCameraPostProc.cpp \
         QCamera2HWICallbacks.cpp \
         QCameraParameters.cpp \
-        QCameraThermalAdapter.cpp
+        QCameraThermalAdapter.cpp \
+        wrapper/QualcommCamera.cpp
 
 LOCAL_CFLAGS = -Wall -Werror
 #Debug logs are enabled
@@ -27,7 +28,8 @@ LOCAL_C_INCLUDES := \
         hardware/qcom/display/libgralloc \
         hardware/qcom/media/libstagefrighthw \
         $(LOCAL_PATH)/../../mm-image-codec/qexif \
-        $(LOCAL_PATH)/../../mm-image-codec/qomx_core
+        $(LOCAL_PATH)/../../mm-image-codec/qomx_core \
+        $(LOCAL_PATH)/wrapper
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/media
