@@ -811,7 +811,7 @@ int32_t mm_stream_config(mm_stream_t *my_obj,
     CDBG("%s: E, my_handle = 0x%x, fd = %d, state = %d",
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
     my_obj->stream_info = config->stream_info;
-    my_obj->buf_num = 0;
+    my_obj->buf_num = config->stream_info->num_bufs;
     my_obj->mem_vtbl = config->mem_vtbl;
     my_obj->padding_info = config->padding_info;
     /* cd through intf always palced at idx 0 of buf_cb */
