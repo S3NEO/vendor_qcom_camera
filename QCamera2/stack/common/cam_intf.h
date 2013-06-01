@@ -149,6 +149,9 @@ typedef struct{
     cam_control_range_t saturation_ctrl;  /* saturation */
     cam_control_range_t sce_ctrl;         /* skintone enhancement factor */
 
+    /* QCOM HDR specific control. Indicates number of frames and exposure needs for the frames */
+    cam_hdr_bracketing_info_t hdr_bracketing_setting;
+
     uint32_t qcom_supported_feature_mask; /* mask of qcom specific features supported:
                                            * such as CAM_QCOM_FEATURE_SUPPORTED_FACE_DETECTION*/
     cam_padding_info_t padding_info;      /* padding information from PP */
@@ -281,7 +284,7 @@ typedef union {
     INCLUDE(CAM_INTF_PARM_ASD_ENABLE,               int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_RECORDING_HINT,           int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_DIS_ENABLE,               int32_t,                     1);
-    INCLUDE(CAM_INTF_PARM_HDR,                      cam_exp_bracketing_t,        1);
+    INCLUDE(CAM_INTF_PARM_HDR,                      cam_hdr_param_t,             1);
     INCLUDE(CAM_INTF_PARM_FRAMESKIP,                int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_ZSL_MODE,                 int32_t,                     1);
     INCLUDE(CAM_INTF_PARM_HDR_NEED_1X,              int32_t,                     1);
