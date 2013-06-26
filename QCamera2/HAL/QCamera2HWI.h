@@ -226,6 +226,8 @@ public:
     virtual int thermalEvtHandle(qcamera_thermal_level_enum_t level,
             void *userdata, void *data);
 
+    virtual int recalcFPSRange(int &minFPS, int &maxFPS);
+
     // Implementation of QCameraTorchInterface
     virtual int prepareTorchCamera();
     virtual int releaseTorchCamera();
@@ -279,6 +281,12 @@ private:
     void signalAPIResult(qcamera_api_result_t *result);
     void signalEvtResult(qcamera_api_result_t *result);
 
+    int calcThermalLevel(
+                qcamera_thermal_level_enum_t level,
+                const int minFPS,
+                const int maxFPS,
+                cam_fps_range_t &adjustedRange,
+                enum msm_vfe_frame_skip_pattern &skipPattern);
     int updateThermalLevel(qcamera_thermal_level_enum_t level);
 
     // update entris to set parameters and check if restart is needed
@@ -439,6 +447,7 @@ private:
 
     int mDumpFrmCnt;  // frame dump count
     int mDumpSkipCnt; // frame skip count
+    qcamera_thermal_level_enum_t mThermalLevel;
 };
 
 }; // namespace qcamera

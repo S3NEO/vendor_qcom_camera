@@ -571,6 +571,7 @@ QCameraParameters::QCameraParameters()
       m_bNeedLockCAF(false),
       m_bCAFLocked(false),
       m_bAFRunning(false),
+      m_AdjustFPS(NULL),
       m_tempMap()
 {
     char value[PROPERTY_VALUE_MAX];
@@ -625,6 +626,7 @@ QCameraParameters::QCameraParameters(const String8 &params)
     m_bNeedLockCAF(false),
     m_bCAFLocked(false),
     m_bAFRunning(false),
+    m_AdjustFPS(NULL),
     m_tempMap()
 {
     memset(&m_LiveSnapshotSize, 0, sizeof(m_LiveSnapshotSize));
@@ -3361,12 +3363,15 @@ int32_t QCameraParameters::initDefaultParameters()
  *              NO_ERROR  -- success
  *              none-zero failure code
  *==========================================================================*/
-int32_t QCameraParameters::init(cam_capability_t *capabilities, mm_camera_vtbl_t *mmOps)
+int32_t QCameraParameters::init(cam_capability_t *capabilities,
+                                mm_camera_vtbl_t *mmOps,
+                                QCameraAdjustFPS *adjustFPS)
 {
     int32_t rc = NO_ERROR;
 
     m_pCapability = capabilities;
     m_pCamOpsTbl = mmOps;
+    m_AdjustFPS = adjustFPS;
 
     //Allocate Set Param Buffer
     m_pParamHeap = new QCameraHeapMemory(QCAMERA_ION_USE_CACHE);
@@ -3432,6 +3437,8 @@ void QCameraParameters::deinit()
         m_pParamHeap = NULL;
         m_pParamBuf = NULL;
     }
+
+    m_AdjustFPS = NULL;
 
     m_tempMap.clear();
 }
@@ -3599,7 +3606,18 @@ int32_t QCameraParameters::setPreviewFpsRange(int minFPS, int maxFPS)
     snprintf(str, sizeof(str), "%d,%d", minFPS, maxFPS);
     ALOGD("%s: Setting preview fps range %s", __func__, str);
     updateParamEntry(KEY_PREVIEW_FPS_RANGE, str);
-    cam_fps_range_t fps_range = {(float)(minFPS / 1000.0), (float)(maxFPS / 1000.0)};
+    cam_fps_range_t fps_range = {minFPS / float (1000.0), maxFPS / float (1000.0)};
+
+    if ( NULL != m_AdjustFPS ) {
+        m_AdjustFPS->recalcFPSRange(minFPS, maxFPS);
+        ALOGD("%s: Thermal adjusted preview fps range %d,%d",
+              __func__,
+              minFPS,
+              maxFPS);
+        fps_range.min_fps = minFPS;
+        fps_range.max_fps = maxFPS;
+    }
+
     return AddSetParmEntryToBatch(m_pParamBuf,
                                   CAM_INTF_PARM_FPS_RANGE,
                                   sizeof(cam_fps_range_t),

@@ -59,6 +59,13 @@ public:
     virtual ~QCameraAdjustFPS() {}
 };
 
+class QCameraAdjustFPS
+{
+public:
+    virtual int recalcFPSRange(int &minFPS, int &maxFPS) = 0;
+    virtual ~QCameraAdjustFPS() {}
+};
+
 class QCameraParameters: public CameraParameters
 {
 public:
@@ -618,6 +625,7 @@ private:
     bool m_bAFRunning;
     qcamera_thermal_mode m_ThermalMode; // adjust fps vs adjust frameskip
     cam_dimension_t m_LiveSnapshotSize; // live snapshot size
+    QCameraAdjustFPS *m_AdjustFPS;
     QCameraTorchInterface *m_pTorch; // Interface for enabling torch
     bool m_bReleaseTorchCamera; // Release camera resources after torch gets disabled
 
