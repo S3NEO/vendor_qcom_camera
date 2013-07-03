@@ -480,6 +480,22 @@ typedef struct {
   cam_exp_bracketing_t exp_val;
 } cam_hdr_bracketing_info_t;
 
+typedef struct {
+    uint8_t chromatixData[21292];
+    uint8_t common_chromatixData[42044];
+} tune_chromatix_t;
+
+typedef struct {
+    uint8_t af_tuneData[1592];
+} tune_autofocus_t;
+
+typedef struct {
+    uint8_t stepsize;
+    uint8_t direction;
+    uint8_t num_steps;
+    uint8_t ttype;
+} tune_actuator_t;
+
 typedef enum {
     CAM_AEC_ROI_OFF,
     CAM_AEC_ROI_ON
