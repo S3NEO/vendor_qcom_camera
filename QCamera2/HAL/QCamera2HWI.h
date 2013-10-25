@@ -160,9 +160,10 @@ private:
     QCameraQueue     mDataQ;
     QCameraCmdThread mProcTh;
 };
+
 class QCamera2HardwareInterface : public QCameraAllocator,
                                   public QCameraThermalCallback,
-				  public QCameraAdjustFPS,
+                                  public QCameraAdjustFPS,
                                   public QCameraTorchInterface
 {
 public:

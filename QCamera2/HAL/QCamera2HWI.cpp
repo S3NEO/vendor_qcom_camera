@@ -1278,7 +1278,6 @@ int QCamera2HardwareInterface::releaseTorchCamera()
     return NO_ERROR;
 }
 
-
 /*===========================================================================
  * FUNCTION   : getBufNumRequired
  *
@@ -2817,9 +2816,11 @@ int32_t QCamera2HardwareInterface::addPreviewChannel()
     QCameraChannel *pChannel = NULL;
 
     if (m_channels[QCAMERA_CH_TYPE_PREVIEW] != NULL) {
-        // if we had preview channel before, delete it first
-        delete m_channels[QCAMERA_CH_TYPE_PREVIEW];
-        m_channels[QCAMERA_CH_TYPE_PREVIEW] = NULL;
+        // Using the no preview torch WA it is possible
+        // to already have a preview channel present before
+        // start preview gets called.
+        ALOGD(" %s : Preview Channel already added!", __func__);
+        return NO_ERROR;
     }
 
     pChannel = new QCameraChannel(mCameraHandle->camera_handle,
@@ -3048,6 +3049,12 @@ int32_t QCamera2HardwareInterface::addZSLChannel()
         m_channels[QCAMERA_CH_TYPE_PREVIEW] = NULL;
     }
 
+
+     if (m_channels[QCAMERA_CH_TYPE_PREVIEW] != NULL) {
+        // if we had ZSL channel before, delete it first
+        delete m_channels[QCAMERA_CH_TYPE_PREVIEW];
+        m_channels[QCAMERA_CH_TYPE_PREVIEW] = NULL;
+    }
 
     pChannel = new QCameraPicChannel(mCameraHandle->camera_handle,
                                      mCameraHandle->ops);
