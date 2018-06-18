@@ -131,12 +131,22 @@ int QCamera2Factory::getCameraInfo(int camera_id, struct camera_info *info)
     int rc;
     ALOGE("%s: E, camera_id = %d", __func__, camera_id);
 
-    if (!mNumOfCameras || camera_id >= mNumOfCameras || !info) {
-        return INVALID_OPERATION;
+    if (mNumOfCameras && camera_id <= mNumOfCameras && info) {
+	ALOGE("%s: E, were in the first if!", __func__);
+        if (!camera_id || QCamera2HardwareInterface::getCapabilities(0, info) || camera_id != QCamera2HardwareInterface::getCapabilities(camera_id +1, info)) {
+		ALOGE("%s: E, were in some even more weird!", __func__);
+		QCamera2HardwareInterface::getCapabilities(camera_id +1, info);
+	}
+	rc = QCamera2HardwareInterface::getCapabilities(camera_id, info);
+	if (rc < 0){
+		ALOGE("%s: __dbg: getCapabilities failed!", __func__);
+	}
     }
-
-    rc = QCamera2HardwareInterface::getCapabilities(camera_id, info);
-    ALOGV("%s: X", __func__);
+    else {
+	rc = INVALID_OPERATION;
+	ALOGE("%s: __dbg: Invalid operation num_of_cams!", __func__);
+    }
+    ALOGE("%s: X", __func__);
     return rc;
 }
 

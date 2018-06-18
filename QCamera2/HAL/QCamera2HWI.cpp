@@ -1125,6 +1125,7 @@ int QCamera2HardwareInterface::initCapabilities(int cameraId)
     mm_camera_vtbl_t *cameraHandle = NULL;
     QCameraHeapMemory *capabilityHeap = NULL;
 
+    ALOGE("%s: cameraId=%d", __func__, cameraId);
     cameraHandle = camera_open(cameraId);
     if (!cameraHandle) {
         ALOGE("%s: camera_open failed", __func__);

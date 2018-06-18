@@ -66,6 +66,7 @@ static uint16_t g_handler_history_count = 0; /* history count for handler */
  *==========================================================================*/
 uint32_t mm_camera_util_generate_handler(uint8_t index)
 {
+    CDBG_ERROR("%s: index=%d", __func__, index);
     uint32_t handler = 0;
     pthread_mutex_lock(&g_handler_lock);
     g_handler_history_count++;
@@ -74,6 +75,7 @@ uint32_t mm_camera_util_generate_handler(uint8_t index)
     }
     handler = g_handler_history_count;
     handler = (handler<<8) | index;
+    CDBG_ERROR("%s: after handler is=%d", __func__, handler);
     pthread_mutex_unlock(&g_handler_lock);
     return handler;
 }
