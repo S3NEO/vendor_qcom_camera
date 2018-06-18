@@ -1204,9 +1204,11 @@ int QCamera2HardwareInterface::getCapabilities(int cameraId,
         rc = initCapabilities(cameraId);
         if (rc < 0) {
             pthread_mutex_unlock(&g_camlock);
+	    ALOGE("%s: __dbg: init capabilities failed, rc = %d, :%d", __func__, rc, cameraId);
             return rc;
         }
     }
+    ALOGE("%s: __dbg: init capabilities rc = %d, :%d", __func__, rc, cameraId);
 
     switch(gCamCapability[cameraId]->position) {
     case CAM_POSITION_BACK:

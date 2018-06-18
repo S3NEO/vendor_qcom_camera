@@ -70,6 +70,7 @@ mm_channel_t * mm_camera_util_get_channel_by_handler(
                                     mm_camera_obj_t * cam_obj,
                                     uint32_t handler)
 {
+    CDBG_ERROR("%s: handler=%d", __func__, handler);
     int i;
     mm_channel_t *ch_obj = NULL;
     for(i = 0; i < MM_CAMERA_CHANNEL_MAX; i++) {
@@ -471,7 +472,7 @@ int32_t mm_camera_qbuf(mm_camera_obj_t *my_obj,
     int rc = -1;
     mm_channel_t * ch_obj = NULL;
     ch_obj = mm_camera_util_get_channel_by_handler(my_obj, ch_id);
-
+    CDBG_ERROR("%s: ch_id=%d", __func__, ch_id);
     pthread_mutex_unlock(&my_obj->cam_lock);
 
     /* we always assume qbuf will be done before channel/stream is fully stopped
@@ -633,6 +634,8 @@ int32_t mm_camera_prepare_snapshot(mm_camera_obj_t *my_obj,
 {
     int32_t rc = -1;
     int32_t value = do_af_flag;
+
+    CDBG_ERROR("%s: do_af_flag= %d\n", __func__, do_af_flag);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_PREPARE_SNAPSHOT, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
