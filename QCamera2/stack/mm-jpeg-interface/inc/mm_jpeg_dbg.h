@@ -30,6 +30,8 @@
 #ifndef __MM_JPEG_DBG_H__
 #define __MM_JPEG_DBG_H__
 
+#define LOG_DEBUG
+
 #ifndef LOG_DEBUG
   #ifdef _ANDROID_
     #undef LOG_NIDEBUG

@@ -30,7 +30,6 @@
 #include "mm_jpeg_interface.h"
 #include "mm_jpeg_ionbuf.h"
 #include <sys/time.h>
-#include <stdlib.h>
 
 /** DUMP_TO_FILE:
  *  @filename: file name
@@ -81,7 +80,11 @@ typedef struct {
   uint32_t session_id;
 } mm_jpeg_intf_test_t;
 
-static void mm_jpeg_encode_callback(jpeg_job_status_t status, uint32_t client_hdl, uint32_t jobId, mm_jpeg_output_t *p_output, void *userData)
+static void mm_jpeg_encode_callback(jpeg_job_status_t status,
+  uint32_t client_hdl,
+  uint32_t jobId,
+  mm_jpeg_output_t *p_output,
+  void *userData)
 {
   mm_jpeg_intf_test_t *p_obj = (mm_jpeg_intf_test_t *)userData;
 
@@ -136,7 +139,7 @@ void mm_jpeg_test_free(buffer_test_t *p_buffer)
 
 int mm_jpeg_test_read(mm_jpeg_intf_test_t *p_obj)
 {
-  //int rc = 0;
+  int rc = 0;
   FILE *fp = NULL;
   int file_size = 0;
   fp = fopen(p_obj->filename, "rb");

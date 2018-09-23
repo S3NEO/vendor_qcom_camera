@@ -6,7 +6,7 @@ LOCAL_PATH := $(MM_JPEG_TEST_PATH)
 LOCAL_MODULE_TAGS := optional
 
 LOCAL_CFLAGS := -DCAMERA_ION_HEAP_ID=ION_IOMMU_HEAP_ID
-LOCAL_CFLAGS += -Wall -Wextra -Werror -Wno-unused-parameter
+LOCAL_CFLAGS += -Werror
 LOCAL_CFLAGS += -D_ANDROID_
 LOCAL_CFLAGS += -include mm_jpeg_dbg.h
 
@@ -24,11 +24,6 @@ LOCAL_C_INCLUDES += $(OMX_HEADER_DIR)
 LOCAL_C_INCLUDES += $(OMX_CORE_DIR)/qexif
 LOCAL_C_INCLUDES += $(OMX_CORE_DIR)/qomx_core
 
-ifneq ($(strip $(USE_BIONIC_HEADER)),true)
-LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_C_INCLUDES += $(call project-path-for,qcom-camera)
-endif
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_SRC_FILES := mm_jpeg_ionbuf.c
 LOCAL_SRC_FILES += mm_jpeg_test.c 

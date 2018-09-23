@@ -167,6 +167,11 @@ public:
     static const char TOUCH_AF_AEC_OFF[];
     static const char TOUCH_AF_AEC_ON[];
 
+    static const char FW_VERSION[];
+    static const char FW_UPDATE[];
+    static const char FW_DUMP[];
+    static const char FW_FORCE[];
+
     // Values for Scene mode
     static const char SCENE_MODE_ASD[];
     static const char SCENE_MODE_BACKLIGHT[];
@@ -335,6 +340,8 @@ public:
     static const char FLIP_MODE_H[];
     static const char FLIP_MODE_VH[];
 
+    static const char KEY_FIRMWARE_MODE[];
+
     enum {
         CAMERA_ORIENTATION_UNKNOWN = 0,
         CAMERA_ORIENTATION_PORTRAIT = 1,
@@ -401,7 +408,6 @@ public:
     int32_t setLockCAF(bool bLock);
     int32_t setFrameSkip(enum msm_vfe_frame_skip_pattern pattern);
     qcamera_thermal_mode getThermalMode() {return m_ThermalMode;};
-    int32_t updateRecordingHintValue(int32_t value);
 
     cam_focus_mode_type getFocusMode() const {return mFocusMode;};
     int32_t setNumOfSnapshot();
@@ -453,6 +459,7 @@ private:
     int32_t setExposureCompensation(const QCameraParameters& );
     int32_t setWhiteBalance(const QCameraParameters& );
     int32_t setAntibanding(const QCameraParameters& );
+    int32_t setFirmwareMode(const QCameraParameters& );
     int32_t setFocusAreas(const QCameraParameters& );
     int32_t setMeteringAreas(const QCameraParameters& );
     int32_t setSceneMode(const QCameraParameters& );
@@ -492,6 +499,7 @@ private:
     int32_t setExposureCompensation(int expComp);
     int32_t setWhiteBalance(const char *wbStr);
     int32_t setAntibanding(const char *antiBandingStr);
+    int32_t setFirmwareMode(const char *FirmwareStr);
     int32_t setFocusAreas(const char *focusAreasStr);
     int32_t setMeteringAreas(const char *meteringAreasStr);
     int32_t setSceneMode(const char *sceneModeStr);
@@ -521,7 +529,6 @@ private:
     String8 createFpsRangeString(const cam_fps_range_t *fps,
                                  int len,
                                  int &default_fps_index);
-    static int compareFPSValues(const void *p1, const void *p2);
     String8 createFpsString(const cam_fps_range_t *fps, int len);
     String8 createZoomRatioValuesString(int *zoomRatios, int length);
     int lookupAttr(const QCameraMap arr[], int len, const char *name);
@@ -565,15 +572,16 @@ private:
     static const QCameraMap TOUCH_AF_AEC_MODES_MAP[];
     static const QCameraMap FLIP_MODES_MAP[];
 
+    // Custom stuff comes here...
+    static const QCameraMap FW_MODE_MAP[];
+
     cam_capability_t *m_pCapability;
     mm_camera_vtbl_t *m_pCamOpsTbl;
     QCameraHeapMemory *m_pParamHeap;
     parm_buffer_t     *m_pParamBuf;  // ptr to param buf in m_pParamHeap
 
     bool m_bZslMode;                // if ZSL is enabled
-    bool m_bZslMode_new;
     bool m_bRecordingHint;          // local copy of recording hint
-    bool m_bRecordingHint_new;
     bool m_bHistogramEnabled;       // if histogram is enabled
     int  m_nFaceProcMask;           // face process mask
     bool m_bDebugFps;               // if FPS need to be logged

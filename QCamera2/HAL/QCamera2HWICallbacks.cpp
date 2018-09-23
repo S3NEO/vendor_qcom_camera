@@ -149,8 +149,7 @@ void QCamera2HardwareInterface::capture_channel_cb_routine(mm_camera_super_buf_t
             QCameraStream *pStream =
                 pChannel->getStreamByHandle(recvd_frame->bufs[i]->stream_id);
             if (pStream != NULL) {
-                if (pStream->isTypeOf(CAM_STREAM_TYPE_SNAPSHOT) ||
-                    pStream->isTypeOf(CAM_STREAM_TYPE_NON_ZSL_SNAPSHOT)) {
+                if (pStream->isTypeOf(CAM_STREAM_TYPE_SNAPSHOT)) {
                     main_stream = pStream;
                     main_frame = recvd_frame->bufs[i];
                     break;
@@ -685,7 +684,6 @@ void QCamera2HardwareInterface::metadata_stream_cb_routine(mm_camera_super_buf_t
                 __func__, pMetaData->faces_data.num_faces_detected);
         } else {
             // process face detection result
-            ALOGD("[KPI Perf] %s: Number of faces detected %d",__func__,pMetaData->faces_data.num_faces_detected);
             pme->processFaceDetectionResult(&pMetaData->faces_data);
         }
     }
@@ -856,10 +854,7 @@ void QCamera2HardwareInterface::dumpFrameToFile(const void *data,
                         break;
                     case QCAMERA_DUMP_FRM_SNAPSHOT:
                         {
-                            if (mParameters.isZSLMode())
-                                mParameters.getStreamDimension(CAM_STREAM_TYPE_SNAPSHOT, dim);
-                            else
-                                mParameters.getStreamDimension(CAM_STREAM_TYPE_NON_ZSL_SNAPSHOT, dim);
+                            mParameters.getStreamDimension(CAM_STREAM_TYPE_SNAPSHOT, dim);
                             snprintf(buf, sizeof(buf), "/data/%ds_%dx%d_%d.yuv",
                                      mDumpFrmCnt, dim.width, dim.height, index);
                         }
@@ -880,10 +875,7 @@ void QCamera2HardwareInterface::dumpFrameToFile(const void *data,
                         break;
                     case QCAMERA_DUMP_FRM_JPEG:
                         {
-                            if (mParameters.isZSLMode())
-                                mParameters.getStreamDimension(CAM_STREAM_TYPE_SNAPSHOT, dim);
-                            else
-                                mParameters.getStreamDimension(CAM_STREAM_TYPE_NON_ZSL_SNAPSHOT, dim);
+                            mParameters.getStreamDimension(CAM_STREAM_TYPE_SNAPSHOT, dim);
                             snprintf(buf, sizeof(buf), "/data/%dj_%dx%d_%d.yuv",
                                      mDumpFrmCnt, dim.width, dim.height, index);
                         }
@@ -995,9 +987,12 @@ void QCameraCbNotifier::releaseNotifications(void *data, void *user_data)
     qcamera_callback_argm_t *arg = ( qcamera_callback_argm_t * ) data;
 
     if ( ( NULL != arg ) && ( NULL != user_data ) ) {
+
         if ( arg->release_cb ) {
             arg->release_cb(arg->user_data, arg->cookie);
         }
+
+        delete arg;
     }
 }
 
@@ -1136,18 +1131,18 @@ void * QCameraCbNotifier::cbNotifyRoutine(void * data)
                         case QCAMERA_DATA_SNAPSHOT_CALLBACK:
                             {
                                 if (TRUE == isSnapshotActive && pme->mDataCb ) {
-                                    numOfSnapshotRcvd++;
-                                    if (numOfSnapshotExpected > 0 &&
-                                        numOfSnapshotExpected == numOfSnapshotRcvd) {
-                                        // notify HWI that snapshot is done
-                                        pme->mParent->processSyncEvt(QCAMERA_SM_EVT_SNAPSHOT_DONE,
-                                                                     NULL);
-                                    }
                                     pme->mDataCb(cb->msg_type,
                                                  cb->data,
                                                  cb->index,
                                                  cb->metadata,
                                                  pme->mCallbackCookie);
+                                    numOfSnapshotRcvd++;
+                                    if (numOfSnapshotExpected > 0 &&
+                                        numOfSnapshotExpected == numOfSnapshotRcvd) {
+                                        // notify HWI that snapshot is done
+                                        pme->mParent->processEvt(QCAMERA_SM_EVT_SNAPSHOT_DONE,
+                                                                 NULL);
+                                    }
                                 }
                             }
                             break;

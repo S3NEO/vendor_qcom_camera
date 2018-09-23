@@ -14,10 +14,6 @@ endif
 
 LOCAL_CFLAGS += -D_ANDROID_
 
-
-LOCAL_CLANG_CFLAGS += \
-	-Wno-error=enum-conversion
-
 LOCAL_SRC_FILES:= \
         src/mm_qcamera_app.c \
         src/mm_qcamera_unit_test.c \
@@ -33,10 +29,6 @@ LOCAL_C_INCLUDES+= \
         $(LOCAL_PATH)/../common \
         $(LOCAL_PATH)/../../../mm-image-codec/qexif \
         $(LOCAL_PATH)/../../../mm-image-codec/qomx_core
-
-LOCAL_C_INCLUDES+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/media
-LOCAL_C_INCLUDES+= $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
-LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_CFLAGS += -DCAMERA_ION_HEAP_ID=ION_CP_MM_HEAP_ID
 ifeq ($(call is-board-platform,msm8974),true)
@@ -70,7 +62,7 @@ else
         LOCAL_CFLAGS += -DCAMERA_ION_FALLBACK_HEAP_ID=ION_CAMERA_HEAP_ID
         LOCAL_CFLAGS += -DNUM_RECORDING_BUFFERS=5
 endif
-LOCAL_CFLAGS += -Wall -Wextra -Werror
+LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_SHARED_LIBRARIES:= \
          libcutils liblog libdl

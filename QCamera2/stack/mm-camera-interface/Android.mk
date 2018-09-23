@@ -39,7 +39,7 @@ LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_C_INCLUDES += hardware/qcom/media/mm-core/inc
 
-LOCAL_CFLAGS += -Wall -Wextra -Werror
+LOCAL_CFLAGS += -Wall -Werror
 
 LOCAL_SRC_FILES := $(MM_CAM_FILES)
 

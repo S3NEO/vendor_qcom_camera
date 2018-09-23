@@ -32,7 +32,6 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/prctl.h>
 #include <fcntl.h>
 #include <poll.h>
 
@@ -455,7 +454,6 @@ OMX_ERRORTYPE mm_jpeg_session_create(mm_jpeg_job_session_t* p_session)
   p_session->fbd_count = 0;
   p_session->encode_pid = -1;
   p_session->config = OMX_FALSE;
-  p_session->exif_count_local = 0;
 
   p_session->omx_callbacks.EmptyBufferDone = mm_jpeg_ebd;
   p_session->omx_callbacks.FillBufferDone = mm_jpeg_fbd;
@@ -511,6 +509,10 @@ void mm_jpeg_session_destroy(mm_jpeg_job_session_t* p_session)
   }
   p_session->omx_handle = NULL;
 
+  rc = releaseExifEntry(&p_session->params.exif_info);
+  if (rc) {
+    CDBG_ERROR("%s:%d] Exif release failed (%d)", __func__, __LINE__, rc);
+  }
   pthread_mutex_destroy(&p_session->lock);
   pthread_cond_destroy(&p_session->cond);
   CDBG("%s:%d] X", __func__, __LINE__);
@@ -575,50 +577,6 @@ OMX_ERRORTYPE mm_jpeg_session_config_main_buffer_offset(
   return rc;
 }
 
-/** mm_jpeg_encoding_mode:
- *
- *  Arguments:
- *    @p_session: job session
- *
- *  Return:
- *       OMX error values
- *
- *  Description:
- *       Configure the serial or parallel encoding
- *       mode
- *
- **/
-OMX_ERRORTYPE mm_jpeg_encoding_mode(
-  mm_jpeg_job_session_t* p_session)
-{
-  OMX_ERRORTYPE rc = 0;
-  int32_t i = 0;
-  OMX_INDEXTYPE indextype;
-  QOMX_ENCODING_MODE encoding_mode;
-  int32_t totalSize = 0;
-  mm_jpeg_encode_params_t *p_params = &p_session->params;
-  mm_jpeg_encode_job_t *p_jobparams = &p_session->encode_job;
-
-  rc = OMX_GetExtensionIndex(p_session->omx_handle,
-    QOMX_IMAGE_EXT_ENCODING_MODE_NAME, &indextype);
-  if (rc != OMX_ErrorNone) {
-    CDBG_ERROR("%s:%d] Failed", __func__, __LINE__);
-    return rc;
-  }
-
-  CDBG_HIGH("%s:%d] OMX_Serial_Encoding = %d, OMX_Parallel_Encoding = %d ", __func__, __LINE__,
-    (int)OMX_Serial_Encoding,
-    (int)OMX_Parallel_Encoding);
-
-  encoding_mode = OMX_Serial_Encoding;
-  rc = OMX_SetParameter(p_session->omx_handle, indextype, &encoding_mode);
-  if (rc != OMX_ErrorNone) {
-    CDBG_ERROR("%s:%d] Failed", __func__, __LINE__);
-    return rc;
-  }
-  return rc;
-}
-
 /** map_jpeg_format:
  *
  *  Arguments:
@@ -674,9 +632,6 @@ OMX_ERRORTYPE mm_jpeg_session_config_ports(mm_jpeg_job_session_t* p_session)
   mm_jpeg_encode_params_t *p_params = &p_session->params;
   mm_jpeg_encode_job_t *p_jobparams = &p_session->encode_job;
 
-  mm_jpeg_buf_t *p_src_buf =
-    &p_params->src_main_buf[p_jobparams->src_index];
-
   p_session->inputPort.nPortIndex = 0;
   p_session->outputPort.nPortIndex = 1;
   p_session->inputTmbPort.nPortIndex = 2;
@@ -707,9 +662,9 @@ OMX_ERRORTYPE mm_jpeg_session_config_ports(mm_jpeg_job_session_t* p_session)
   p_session->inputPort.format.image.nFrameHeight =
     p_jobparams->main_dim.src_dim.height;
   p_session->inputPort.format.image.nStride =
-    p_src_buf->offset.mp[0].stride;
+    p_session->inputPort.format.image.nFrameWidth;
   p_session->inputPort.format.image.nSliceHeight =
-    p_src_buf->offset.mp[0].scanline;
+    p_session->inputPort.format.image.nFrameHeight;
   p_session->inputPort.format.image.eColorFormat =
     map_jpeg_format(p_params->color_format);
   p_session->inputPort.nBufferSize =
@@ -722,47 +677,34 @@ OMX_ERRORTYPE mm_jpeg_session_config_ports(mm_jpeg_job_session_t* p_session)
     return ret;
   }
 
-  if (p_session->params.encode_thumbnail) {
-    mm_jpeg_buf_t *p_tmb_buf =
-      &p_params->src_thumb_buf[p_jobparams->thumb_index];
-    p_session->inputTmbPort.format.image.nFrameWidth =
-      p_jobparams->thumb_dim.src_dim.width;
-    p_session->inputTmbPort.format.image.nFrameHeight =
-      p_jobparams->thumb_dim.src_dim.height;
-    p_session->inputTmbPort.format.image.nStride =
-      p_tmb_buf->offset.mp[0].stride;
-    p_session->inputTmbPort.format.image.nSliceHeight =
-      p_tmb_buf->offset.mp[0].scanline;
-    p_session->inputTmbPort.format.image.eColorFormat =
-      map_jpeg_format(p_params->color_format);
-    p_session->inputTmbPort.nBufferSize =
-      p_params->src_thumb_buf[p_jobparams->thumb_index].buf_size;
-    p_session->inputTmbPort.nBufferCountActual = p_params->num_tmb_bufs;
-    ret = OMX_SetParameter(p_session->omx_handle, OMX_IndexParamPortDefinition,
-      &p_session->inputTmbPort);
+  p_session->inputTmbPort.format.image.nFrameWidth =
+    p_jobparams->thumb_dim.src_dim.width;
+  p_session->inputTmbPort.format.image.nFrameHeight =
+    p_jobparams->thumb_dim.src_dim.height;
+  p_session->inputTmbPort.format.image.nStride =
+    p_session->inputTmbPort.format.image.nFrameWidth;
+  p_session->inputTmbPort.format.image.nSliceHeight =
+    p_session->inputTmbPort.format.image.nFrameHeight;
+  p_session->inputTmbPort.format.image.eColorFormat =
+    map_jpeg_format(p_params->color_format);
+  p_session->inputTmbPort.nBufferSize =
+    p_params->src_thumb_buf[p_jobparams->thumb_index].buf_size;
+  p_session->inputTmbPort.nBufferCountActual = p_params->num_tmb_bufs;
+  ret = OMX_SetParameter(p_session->omx_handle, OMX_IndexParamPortDefinition,
+    &p_session->inputTmbPort);
 
-    if (ret) {
-      CDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-      return ret;
-    }
+  if (ret) {
+    CDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+    return ret;
+  }
 
-    // Enable thumbnail port
-    ret = OMX_SendCommand(p_session->omx_handle, OMX_CommandPortEnable,
-        p_session->inputTmbPort.nPortIndex, NULL);
+  // Enable thumbnail port
+  ret = OMX_SendCommand(p_session->omx_handle, OMX_CommandPortEnable,
+      p_session->inputTmbPort.nPortIndex, NULL);
 
-    if (ret) {
-      CDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-      return ret;
-    }
-  } else {
-    // Disable thumbnail port
-    ret = OMX_SendCommand(p_session->omx_handle, OMX_CommandPortDisable,
-        p_session->inputTmbPort.nPortIndex, NULL);
-
-    if (ret) {
-      CDBG_ERROR("%s:%d] failed", __func__, __LINE__);
-      return ret;
-    }
+  if (ret) {
+    CDBG_ERROR("%s:%d] failed", __func__, __LINE__);
+    return ret;
   }
 
   p_session->outputPort.nBufferSize =
@@ -900,7 +842,7 @@ OMX_ERRORTYPE mm_jpeg_session_config_thumbnail(mm_jpeg_job_session_t* p_session)
   p_frame_info->cbcrOffset[0] = p_tmb_buf->offset.mp[1].offset;
   p_frame_info->cbcrOffset[1] = p_tmb_buf->offset.mp[2].offset;
 
-  ret = OMX_SetConfig(p_session->omx_handle, thumb_indextype,
+  ret = OMX_SetParameter(p_session->omx_handle, thumb_indextype,
     &thumbnail_info);
   if (ret) {
     CDBG_ERROR("%s:%d] Error", __func__, __LINE__);
@@ -1009,6 +951,8 @@ OMX_ERRORTYPE mm_jpeg_session_config_main_crop(mm_jpeg_job_session_t *p_session)
 OMX_ERRORTYPE mm_jpeg_session_config_main(mm_jpeg_job_session_t *p_session)
 {
   OMX_ERRORTYPE rc = OMX_ErrorNone;
+  OMX_IMAGE_PARAM_QFACTORTYPE q_factor;
+  mm_jpeg_encode_params_t *p_params = &p_session->params;
   mm_jpeg_encode_job_t *p_jobparams = &p_session->encode_job;
 
   /* config port */
@@ -1027,8 +971,24 @@ OMX_ERRORTYPE mm_jpeg_session_config_main(mm_jpeg_job_session_t *p_session)
     return rc;
   }
 
-  /* set the encoding mode */
-  mm_jpeg_encoding_mode(p_session);
+  /* config crop */
+  CDBG("%s:%d] config main crop", __func__, __LINE__);
+  rc = mm_jpeg_session_config_main_crop(p_session);
+  if (OMX_ErrorNone != rc) {
+    CDBG_ERROR("%s: config crop failed", __func__);
+    return rc;
+  }
+
+  /* set quality */
+  memset(&q_factor, 0, sizeof(q_factor));
+  q_factor.nPortIndex = 0;
+  q_factor.nQFactor = p_params->quality;
+  rc = OMX_SetParameter(p_session->omx_handle, OMX_IndexParamQFactor, &q_factor);
+  CDBG("%s:%d] config QFactor: %d", __func__, __LINE__, (int)q_factor.nQFactor);
+  if (OMX_ErrorNone != rc) {
+    CDBG_ERROR("%s:%d] Error %d", __func__, __LINE__, rc);
+    return rc;
+  }
 
   return rc;
 }
@@ -1053,7 +1013,6 @@ OMX_ERRORTYPE mm_jpeg_session_config_common(mm_jpeg_job_session_t *p_session)
   OMX_CONFIG_ROTATIONTYPE rotate;
   mm_jpeg_encode_params_t *p_params = &p_session->params;
   mm_jpeg_encode_job_t *p_jobparams = &p_session->encode_job;
-  QOMX_EXIF_INFO exif_info;
 
   /* set rotation */
   memset(&rotate, 0, sizeof(rotate));
@@ -1069,55 +1028,35 @@ OMX_ERRORTYPE mm_jpeg_session_config_common(mm_jpeg_job_session_t *p_session)
     (int)p_jobparams->rotation, (int)rotate.nPortIndex);
 
   /* Set Exif data*/
-  memset(&p_session->exif_info_local[0], 0, sizeof(p_session->exif_info_local));
+  memset(&p_session->exif_info_all,  0,  sizeof(p_session->exif_info_all));
 
+  /*If Exif data has been passed copy it*/
+  if (p_params->exif_info.numOfEntries > 0) {
+    CDBG("%s:%d] Num of exif entries passed from HAL: %d", __func__, __LINE__,
+      p_params->exif_info.numOfEntries);
+    memcpy(&p_session->exif_info_all, &p_params->exif_info.exif_data,
+      sizeof(p_params->exif_info.exif_data));
+  }
 
+  p_params->exif_info.exif_data = p_session->exif_info_all;
+
+  if (p_params->exif_info.numOfEntries > 0) {
     /* set exif tags */
+    CDBG("%s:%d] Set exif tags count %d", __func__, __LINE__,
+      (int)p_params->exif_info.numOfEntries);
     rc = OMX_GetExtensionIndex(p_session->omx_handle, QOMX_IMAGE_EXT_EXIF_NAME,
       &exif_idx);
-  if (OMX_ErrorNone != rc) {
-    CDBG_ERROR("%s:%d] Error %d", __func__, __LINE__, rc);
-    return rc;
-  }
-  CDBG_ERROR("%s:%d] Num of exif entries passed from HAL: %d", __func__, __LINE__,
-      (int)p_jobparams->exif_info.numOfEntries);
-  if (p_jobparams->exif_info.numOfEntries > 0) {
-     rc = OMX_SetConfig(p_session->omx_handle, exif_idx,
-      &p_jobparams->exif_info);
     if (OMX_ErrorNone != rc) {
       CDBG_ERROR("%s:%d] Error %d", __func__, __LINE__, rc);
       return rc;
     }
-  }
-  /*parse aditional exif data from the metadata if present*/
-  if ((NULL != p_jobparams->p_metadata_v3) ||
-    (NULL != p_jobparams->p_metadata_v1)) {
-    exif_info.numOfEntries = 0;
-    exif_info.exif_data = &p_session->exif_info_local[0];
 
-    if (NULL != p_jobparams->p_metadata_v3) {
-      process_meta_data_v3(p_jobparams->p_metadata_v3,
-          &exif_info, &p_jobparams->cam_exif_params);
-    } else {
-      process_meta_data_v1(p_jobparams->p_metadata_v1,
-        &exif_info, &p_jobparams->cam_exif_params);
-    }
-    /* After Parse metadata */
-    p_session->exif_count_local = exif_info.numOfEntries;
-
-    if (exif_info.numOfEntries > 0) {
-      /* set exif tags */
-      CDBG("%s:%d] exif tags from metadata count %d", __func__, __LINE__,
-        (int)exif_info.numOfEntries);
-      rc = OMX_SetConfig(p_session->omx_handle, exif_idx,
-      &exif_info);
+    rc = OMX_SetParameter(p_session->omx_handle, exif_idx,
+      &p_params->exif_info);
     if (OMX_ErrorNone != rc) {
       CDBG_ERROR("%s:%d] Error %d", __func__, __LINE__, rc);
       return rc;
-      }
     }
-  } else {
-    CDBG_ERROR("%s:%d] Metadata is null", __func__, __LINE__, rc);
   }
 
   return rc;
@@ -1159,10 +1098,6 @@ OMX_BOOL mm_jpeg_session_abort(mm_jpeg_job_session_t *p_session)
       CDBG("%s:%d] OMX_SendCommand returned error %d", __func__, __LINE__, ret);
       pthread_mutex_unlock(&p_session->lock);
       return 1;
-    }
-    ret = mm_jpeg_destroy_job(p_session);
-    if (ret != 0) {
-      CDBG("%s:%d] Destroy job returned error %d", __func__, __LINE__, rc);
     }
 
     CDBG("%s:%d] before wait", __func__, __LINE__);
@@ -1263,61 +1198,6 @@ inline mm_jpeg_job_session_t *mm_jpeg_get_session(mm_jpeg_obj *my_obj, uint32_t 
   return p_session;
 }
 
-/** mm_jpeg_configure_params
- *
- *  Arguments:
- *    @p_session: encode session
- *
- *  Return:
- *       none
- *
- *  Description:
- *       Configure the job specific params
- *
- **/
-static OMX_ERRORTYPE mm_jpeg_configure_job_params(
-  mm_jpeg_job_session_t *p_session)
-{
-  OMX_ERRORTYPE ret = OMX_ErrorNone;
-  OMX_IMAGE_PARAM_QFACTORTYPE q_factor;
-  mm_jpeg_encode_params_t *p_params = &p_session->params;
-  mm_jpeg_encode_job_t *p_jobparams = &p_session->encode_job;
-
-    /* common config */
-  ret = mm_jpeg_session_config_common(p_session);
-  if (OMX_ErrorNone != ret) {
-    CDBG_ERROR("%s:%d] config common failed", __func__, __LINE__);
-
-  }
-
-  /* config Main Image crop */
-  CDBG("%s:%d] config main crop", __func__, __LINE__);
-  ret = mm_jpeg_session_config_main_crop(p_session);
-  if (OMX_ErrorNone != ret) {
-    CDBG_ERROR("%s: config crop failed", __func__);
-    return ret;
-  }
-
-  /* set quality */
-  memset(&q_factor, 0, sizeof(q_factor));
-  q_factor.nPortIndex = 0;
-  q_factor.nQFactor = p_params->quality;
-  ret = OMX_SetConfig(p_session->omx_handle, OMX_IndexParamQFactor, &q_factor);
-  CDBG("%s:%d] config QFactor: %d", __func__, __LINE__, (int)q_factor.nQFactor);
-  if (OMX_ErrorNone != ret) {
-    CDBG_ERROR("%s:%d] Error setting Q factor %d", __func__, __LINE__, ret);
-    return ret;
-  }
-
-  /* config thumbnail */
-  ret = mm_jpeg_session_config_thumbnail(p_session);
-  if (OMX_ErrorNone != ret) {
-    CDBG_ERROR("%s:%d] config thumbnail img failed", __func__, __LINE__);
-    return ret;
-  }
-
-  return ret;
-}
 /** mm_jpeg_session_configure:
  *
  *  Arguments:
@@ -1347,6 +1227,21 @@ static OMX_ERRORTYPE mm_jpeg_session_configure(mm_jpeg_job_session_t *p_session)
     CDBG_ERROR("%s:%d] config main img failed", __func__, __LINE__);
     goto error;
   }
+
+  /* config thumbnail */
+  ret = mm_jpeg_session_config_thumbnail(p_session);
+  if (OMX_ErrorNone != ret) {
+    CDBG_ERROR("%s:%d] config thumbnail img failed", __func__, __LINE__);
+    goto error;
+  }
+
+  /* common config */
+  ret = mm_jpeg_session_config_common(p_session);
+  if (OMX_ErrorNone != ret) {
+    CDBG_ERROR("%s:%d] config common failed", __func__, __LINE__);
+    goto error;
+  }
+
   ret = mm_jpeg_session_change_state(p_session, OMX_StateIdle,
     mm_jpeg_session_send_buffers);
   if (ret) {
@@ -1384,9 +1279,6 @@ static inline void mm_jpeg_job_done(mm_jpeg_job_session_t *p_session)
 {
   mm_jpeg_obj *my_obj = (mm_jpeg_obj *)p_session->jpeg_obj;
   mm_jpeg_job_q_node_t *node = NULL;
-
-  /*Destroy job related params*/
-  mm_jpeg_destroy_job(p_session);
 
   /*remove the job*/
   node = mm_jpeg_queue_remove_job_by_job_id(&my_obj->ongoing_job_q,
@@ -1434,11 +1326,6 @@ static OMX_ERRORTYPE mm_jpeg_session_encode(mm_jpeg_job_session_t *p_session)
     p_session->config = OMX_TRUE;
   }
 
-  ret = mm_jpeg_configure_job_params(p_session);
-  if (ret) {
-      CDBG_ERROR("%s:%d] Error", __func__, __LINE__);
-      goto error;
-  }
   pthread_mutex_lock(&p_session->lock);
   p_session->encoding = OMX_TRUE;
   pthread_mutex_unlock(&p_session->lock);
@@ -1458,13 +1345,11 @@ static OMX_ERRORTYPE mm_jpeg_session_encode(mm_jpeg_job_session_t *p_session)
     goto error;
   }
 
-  if (p_session->params.encode_thumbnail) {
-    ret = OMX_EmptyThisBuffer(p_session->omx_handle,
-        p_session->p_in_omx_thumb_buf[p_jobparams->thumb_index]);
-    if (ret) {
-      CDBG_ERROR("%s:%d] Error", __func__, __LINE__);
-      goto error;
-    }
+  ret = OMX_EmptyThisBuffer(p_session->omx_handle,
+      p_session->p_in_omx_thumb_buf[p_jobparams->thumb_index]);
+  if (ret) {
+    CDBG_ERROR("%s:%d] Error", __func__, __LINE__);
+    goto error;
   }
 
   ret = OMX_FillThisBuffer(p_session->omx_handle,
@@ -1570,7 +1455,6 @@ static void *mm_jpeg_jobmgr_thread(void *data)
   mm_jpeg_obj *my_obj = (mm_jpeg_obj*)data;
   mm_jpeg_job_cmd_thread_t *cmd_thread = &my_obj->job_mgr;
   mm_jpeg_job_q_node_t* node = NULL;
-  prctl(PR_SET_NAME, (unsigned long)"mm_jpeg_thread", 0, 0, 0);
 
   do {
     do {
@@ -1977,27 +1861,27 @@ int32_t mm_jpeg_create_session(mm_jpeg_obj *my_obj,
   if ((p_params->num_src_bufs > MM_JPEG_MAX_BUF)
     || (p_params->num_dst_bufs > MM_JPEG_MAX_BUF)) {
     CDBG_ERROR("%s:%d] invalid num buffers", __func__, __LINE__);
-    return -1;
+    return rc;
   }
 
   /* check if valid client */
   clnt_idx = mm_jpeg_util_get_index_by_handler(client_hdl);
   if (clnt_idx >= MAX_JPEG_CLIENT_NUM) {
     CDBG_ERROR("%s: invalid client with handler (%d)", __func__, client_hdl);
-    return -1;
+    return rc;
   }
 
   session_idx = mm_jpeg_get_new_session_idx(my_obj, clnt_idx, &p_session);
   if (session_idx < 0) {
     CDBG_ERROR("%s:%d] invalid session id (%d)", __func__, __LINE__, session_idx);
-    return -1;
+    return rc;
   }
 
   ret = mm_jpeg_session_create(p_session);
   if (OMX_ErrorNone != ret) {
     p_session->active = OMX_FALSE;
     CDBG_ERROR("%s:%d] jpeg session create failed", __func__, __LINE__);
-    return ret;
+    return rc;
   }
 
   *p_session_id = (JOB_ID_MAGICVAL << 24) | (session_idx << 8) | clnt_idx;
@@ -2008,36 +1892,6 @@ int32_t mm_jpeg_create_session(mm_jpeg_obj *my_obj,
   p_session->sessionId = *p_session_id;
   p_session->jpeg_obj = (void*)my_obj; /* save a ptr to jpeg_obj */
   CDBG("%s:%d] session id %x", __func__, __LINE__, *p_session_id);
-
-  return ret;
-}
-/** mm_jpeg_destroy_job
- *
- *  Arguments:
- *    @p_session: Session obj
- *
- *  Return:
- *       0 for success else failure
- *
- *  Description:
- *       Destroy the job based paramenters
- *
- **/
-int32_t mm_jpeg_destroy_job(mm_jpeg_job_session_t *p_session)
-{
-  mm_jpeg_encode_job_t *p_jobparams = &p_session->encode_job;
-  int i = 0, rc = 0;
-
-  CDBG_ERROR("%s:%d] Exif entry count %d %d", __func__, __LINE__,
-    (int)p_jobparams->exif_info.numOfEntries,
-    (int)p_session->exif_count_local);
-  for (i = 0; i < p_session->exif_count_local; i++) {
-    rc = releaseExifEntry(&p_session->exif_info_local[i]);
-    if (rc) {
-      CDBG_ERROR("%s:%d] Exif release failed (%d)", __func__, __LINE__, rc);
-    }
-  }
-  p_session->exif_count_local = 0;
 
   return rc;
 }

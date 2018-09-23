@@ -42,7 +42,7 @@
 #define MM_JPEG_MAX_THREADS 30
 #define MM_JPEG_CIRQ_SIZE 30
 #define MM_JPEG_MAX_SESSION 10
-#define MAX_EXIF_TABLE_ENTRIES 50
+#define MAX_EXIF_TABLE_ENTRIES 30
 
 typedef struct {
   struct cam_list list;
@@ -104,8 +104,7 @@ typedef struct {
   pthread_mutex_t lock;
   pthread_cond_t cond;
 
-  QEXIF_INFO_DATA exif_info_local[MAX_EXIF_TABLE_ENTRIES];  //all exif tags for JPEG encoder
-  int exif_count_local;
+  QEXIF_INFO_DATA exif_info_all[MAX_EXIF_TABLE_ENTRIES];  //all exif tags for JPEG encoder
 
   mm_jpeg_cirq_t cb_q;
   int32_t ebd_count;
@@ -177,7 +176,6 @@ extern int32_t mm_jpeg_create_session(mm_jpeg_obj *my_obj,
   uint32_t* p_session_id);
 extern int32_t mm_jpeg_destroy_session_by_id(mm_jpeg_obj *my_obj,
   uint32_t session_id);
-extern int32_t mm_jpeg_destroy_job(mm_jpeg_job_session_t *p_session);
 
 /* utiltity fucntion declared in mm-camera-inteface2.c
  * and need be used by mm-camera and below*/
@@ -194,11 +192,7 @@ extern uint32_t mm_jpeg_queue_get_size(mm_jpeg_queue_t* queue);
 extern void* mm_jpeg_queue_peek(mm_jpeg_queue_t* queue);
 extern int32_t addExifEntry(QOMX_EXIF_INFO *p_exif_info, exif_tag_id_t tagid,
   exif_tag_type_t type, uint32_t count, void *data);
-extern int32_t releaseExifEntry(QEXIF_INFO_DATA *p_exif_data);
-extern int process_meta_data_v1(cam_metadata_info_t *p_meta,
-  QOMX_EXIF_INFO *exif_info, mm_jpeg_exif_params_t *p_cam_exif_params);
-extern int process_meta_data_v3(metadata_buffer_t *p_meta,
-  QOMX_EXIF_INFO *exif_info, mm_jpeg_exif_params_t *p_cam3a_params);
+extern int32_t releaseExifEntry(QOMX_EXIF_INFO *p_exif_info);
 
 #endif /* MM_JPEG_H_ */
 

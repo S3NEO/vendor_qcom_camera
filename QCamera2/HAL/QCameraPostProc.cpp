@@ -243,7 +243,7 @@ int32_t QCameraPostProcessor::getJpegEncodingConfig(mm_jpeg_encode_params_t& enc
     cam_dimension_t thumbnailSize;
     memset(&thumbnailSize, 0, sizeof(cam_dimension_t));
     m_parent->getThumbnailSize(thumbnailSize);
-    if (thumbnailSize.width == 0 || thumbnailSize.height == 0) {
+    if (thumbnailSize.width == 0 && thumbnailSize.height == 0) {
         // (0,0) means no thumbnail
         m_bThumbnailNeeded = FALSE;
     }
@@ -328,8 +328,7 @@ int32_t QCameraPostProcessor::getJpegEncodingConfig(mm_jpeg_encode_params_t& enc
         delete m_pJpegOutputMem;
         m_pJpegOutputMem = NULL;
     }
-    m_pJpegOutputMem = new QCameraStreamMemory(m_parent->mGetMemory,
-                                               QCAMERA_ION_USE_CACHE);
+    m_pJpegOutputMem = new QCameraStreamMemory(m_parent->mGetMemory);
     if (NULL == m_pJpegOutputMem) {
         ret = NO_MEMORY;
         ALOGE("%s : No memory for m_pJpegOutputMem", __func__);
@@ -634,13 +633,6 @@ int32_t QCameraPostProcessor::processPPData(mm_camera_super_buf_t *frame)
         return BAD_VALUE;
     }
 
-    if (m_parent->mParameters.isNV16PictureFormat()) {
-        releaseSuperBuf(job->src_frame);
-        free(job->src_frame);
-        free(job);
-        return processRawData(frame);
-    }
-
     qcamera_jpeg_data_t *jpeg_job =
         (qcamera_jpeg_data_t *)malloc(sizeof(qcamera_jpeg_data_t));
     if (jpeg_job == NULL) {
@@ -796,24 +788,10 @@ void QCameraPostProcessor::releaseNotifyData(void *user_data, void *cookie)
  *==========================================================================*/
 void QCameraPostProcessor::releaseSuperBuf(mm_camera_super_buf_t *super_buf)
 {
-    QCameraChannel *pChannel = NULL;
-
     if (NULL != super_buf) {
-        pChannel = m_parent->getChannelByHandle(super_buf->ch_id);
-
-        if ( NULL == pChannel ) {
-            if (m_pReprocChannel != NULL &&
-                m_pReprocChannel->getMyHandle() == super_buf->ch_id) {
-                pChannel = m_pReprocChannel;
-            }
-        }
-
+        QCameraChannel *pChannel = m_parent->getChannelByHandle(super_buf->ch_id);
         if (pChannel != NULL) {
             pChannel->bufDone(super_buf);
-        } else {
-            ALOGE(" %s : Channel id %d not found!!",
-                  __func__,
-                  super_buf->ch_id);
         }
     }
 }
@@ -955,15 +933,11 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
             pChannel->getStreamByHandle(recvd_frame->bufs[i]->stream_id);
         if (pStream != NULL) {
             if (pStream->isTypeOf(CAM_STREAM_TYPE_SNAPSHOT) ||
-                pStream->isTypeOf(CAM_STREAM_TYPE_NON_ZSL_SNAPSHOT) ||
-                pStream->isOrignalTypeOf(CAM_STREAM_TYPE_SNAPSHOT) ||
-                pStream->isOrignalTypeOf(CAM_STREAM_TYPE_NON_ZSL_SNAPSHOT)) {
+                pStream->isTypeOf(CAM_STREAM_TYPE_OFFLINE_PROC)) {
                 main_stream = pStream;
                 main_frame = recvd_frame->bufs[i];
             } else if (pStream->isTypeOf(CAM_STREAM_TYPE_PREVIEW) ||
-                       pStream->isTypeOf(CAM_STREAM_TYPE_POSTVIEW) ||
-                       pStream->isOrignalTypeOf(CAM_STREAM_TYPE_PREVIEW) ||
-                       pStream->isOrignalTypeOf(CAM_STREAM_TYPE_POSTVIEW)) {
+                       pStream->isTypeOf(CAM_STREAM_TYPE_POSTVIEW)) {
                 thumb_stream = pStream;
                 thumb_frame = recvd_frame->bufs[i];
             }
@@ -1067,20 +1041,13 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
         thumb_stream->getFrameDimension(src_dim);
         jpg_job.encode_job.thumb_dim.src_dim = src_dim;
         m_parent->getThumbnailSize(jpg_job.encode_job.thumb_dim.dst_dim);
-        int rotation = m_parent->getJpegRotation();
-        if (rotation == 90 || rotation ==270) {
-            // swap dimension if rotation is 90 or 270
-            int32_t temp = jpg_job.encode_job.thumb_dim.dst_dim.height;
-            jpg_job.encode_job.thumb_dim.dst_dim.height =
-                jpg_job.encode_job.thumb_dim.dst_dim.width;
-            jpg_job.encode_job.thumb_dim.dst_dim.width = temp;
-        }
         jpg_job.encode_job.thumb_dim.crop = crop;
         jpg_job.encode_job.thumb_index = thumb_frame->buf_idx;
     }
 
     // set rotation only when no online rotation or offline pp rotation is done before
-    if (!m_parent->needRotationReprocess()) {
+    if (!m_parent->needRotationReprocess() &&
+        !m_parent->needOnlineRotation()) {
         jpg_job.encode_job.rotation = m_parent->getJpegRotation();
     }
     ALOGV("%s: jpeg rotation is set to %d", __func__, jpg_job.encode_job.rotation);
@@ -1105,7 +1072,7 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
     }
     if (meta_frame != NULL) {
         // fill in meta data frame ptr
-        jpg_job.encode_job.p_metadata_v1 = (cam_metadata_info_t *)meta_frame->buffer;
+        jpg_job.encode_job.p_metadata = (cam_metadata_info_t *)meta_frame->buffer;
     }
 
     ALOGD("[KPI Perf] %s : call jpeg start_job", __func__);
@@ -1137,7 +1104,6 @@ int32_t QCameraPostProcessor::processRawImageImpl(mm_camera_super_buf_t *recvd_f
     mm_camera_buf_def_t *frame = NULL;
     for ( int i= 0 ; i < recvd_frame->num_bufs ; i++ ) {
         if ( recvd_frame->bufs[i]->stream_type == CAM_STREAM_TYPE_SNAPSHOT ||
-            recvd_frame->bufs[i]->stream_type == CAM_STREAM_TYPE_NON_ZSL_SNAPSHOT ||
              recvd_frame->bufs[i]->stream_type == CAM_STREAM_TYPE_RAW ) {
             frame = recvd_frame->bufs[i];
             break;
@@ -1383,14 +1349,13 @@ void *QCameraPostProcessor::dataProcessRoutine(void *data)
                     }
                 } else {
                     // not active, simply return buf and do no op
-                    qcamera_jpeg_data_t *jpeg_data =
-                        (qcamera_jpeg_data_t *)pme->m_inputJpegQ.dequeue();
-                    if (NULL != jpeg_data) {
-                        pme->releaseJpegJobData(jpeg_data);
-                        free(jpeg_data);
-                    }
                     mm_camera_super_buf_t *super_buf =
-                        (mm_camera_super_buf_t *)pme->m_inputRawQ.dequeue();
+                        (mm_camera_super_buf_t *)pme->m_inputJpegQ.dequeue();
+                    if (NULL != super_buf) {
+                        pme->releaseSuperBuf(super_buf);
+                        free(super_buf);
+                    }
+                    super_buf = (mm_camera_super_buf_t *)pme->m_inputRawQ.dequeue();
                     if (NULL != super_buf) {
                         pme->releaseSuperBuf(super_buf);
                         free(super_buf);

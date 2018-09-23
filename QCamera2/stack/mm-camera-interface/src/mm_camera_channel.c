@@ -67,8 +67,6 @@ int32_t mm_channel_request_super_buf(mm_channel_t *my_obj,
 int32_t mm_channel_cancel_super_buf_request(mm_channel_t *my_obj);
 int32_t mm_channel_flush_super_buf_queue(mm_channel_t *my_obj,
                                          uint32_t frame_idx);
-int32_t mm_channel_config_notify_mode(mm_channel_t *my_obj,
-                                      mm_camera_super_buf_notify_mode_t notify_mode);
 int32_t mm_channel_superbuf_flush(mm_channel_t* my_obj, mm_channel_queue_t * queue);
 int32_t mm_channel_set_stream_parm(mm_channel_t *my_obj,
                                    mm_evt_paylod_set_get_stream_parms_t *payload);
@@ -153,7 +151,6 @@ mm_stream_t * mm_channel_util_get_stream_by_handler(
 static void mm_channel_dispatch_super_buf(mm_camera_cmdcb_t *cmd_cb,
                                           void* user_data)
 {
-    mm_camera_cmd_thread_name("mm_cam_cb");
     mm_channel_t * my_obj = (mm_channel_t *)user_data;
 
     if (NULL == my_obj) {
@@ -189,7 +186,6 @@ static void mm_channel_dispatch_super_buf(mm_camera_cmdcb_t *cmd_cb,
 static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
                                           void *user_data)
 {
-    mm_camera_cmd_thread_name("mm_cam_cmd");
     mm_camera_super_buf_notify_mode_t notify_mode;
     mm_channel_queue_node_t *node = NULL;
     mm_channel_t *ch_obj = (mm_channel_t *)user_data;
@@ -207,13 +203,12 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
         /* skip frames if needed */
         ch_obj->pending_cnt = cmd_cb->u.req_buf.num_buf_requested;
         mm_channel_superbuf_skip(ch_obj, &ch_obj->bundle.superbuf_queue);
-    } else if (MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY == cmd_cb->cmd_type) {
-           ch_obj->bundle.superbuf_queue.attr.notify_mode = cmd_cb->u.notify_mode;
     } else if (MM_CAMERA_CMD_TYPE_FLUSH_QUEUE  == cmd_cb->cmd_type) {
         ch_obj->bundle.superbuf_queue.expected_frame_id = cmd_cb->u.frame_idx;
         mm_channel_superbuf_flush(ch_obj, &ch_obj->bundle.superbuf_queue);
         return;
     }
+
     notify_mode = ch_obj->bundle.superbuf_queue.attr.notify_mode;
 
     /* bufdone for overflowed bufs */
@@ -227,7 +222,7 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
         node = mm_channel_superbuf_dequeue(&ch_obj->bundle.superbuf_queue);
         if (NULL != node) {
             /* decrease pending_cnt */
-            CDBG_ERROR("%s: Super Buffer received, Call client callback, pending_cnt=%d",
+            CDBG("%s: Super Buffer received, Call client callback, pending_cnt=%d",
                  __func__, ch_obj->pending_cnt);
             if (MM_CAMERA_SUPER_BUF_NOTIFY_BURST == notify_mode) {
                 ch_obj->pending_cnt--;
@@ -238,7 +233,7 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
                 uint8_t i;
                 mm_camera_cmdcb_t* cb_node = NULL;
 
-                CDBG_ERROR("%s: Send superbuf to HAL, pending_cnt=%d",
+                CDBG("%s: Send superbuf to HAL, pending_cnt=%d",
                      __func__, ch_obj->pending_cnt);
 
                 /* send cam_sem_post to wake up cb thread to dispatch super buffer */
@@ -303,7 +298,7 @@ int32_t mm_channel_fsm_fn(mm_channel_t *my_obj,
 {
     int32_t rc = -1;
 
-    CDBG_ERROR("%s : E state = %d", __func__, my_obj->state);
+    CDBG("%s : E state = %d", __func__, my_obj->state);
     switch (my_obj->state) {
     case MM_CHANNEL_STATE_NOTUSED:
         rc = mm_channel_fsm_fn_notused(my_obj, evt, in_val, out_val);
@@ -318,13 +313,13 @@ int32_t mm_channel_fsm_fn(mm_channel_t *my_obj,
         rc = mm_channel_fsm_fn_paused(my_obj, evt, in_val, out_val);
         break;
     default:
-        CDBG_ERROR("%s: Not a valid state (%d)", __func__, my_obj->state);
+        CDBG("%s: Not a valid state (%d)", __func__, my_obj->state);
         break;
     }
 
     /* unlock ch_lock */
     pthread_mutex_unlock(&my_obj->ch_lock);
-    CDBG_ERROR("%s : X rc = %d", __func__, rc);
+    CDBG("%s : X rc = %d", __func__, rc);
     return rc;
 }
 
@@ -383,7 +378,7 @@ int32_t mm_channel_fsm_fn_stopped(mm_channel_t *my_obj,
                                   void * out_val)
 {
     int32_t rc = 0;
-    CDBG_ERROR("%s : E evt = %d", __func__, evt);
+    CDBG("%s : E evt = %d", __func__, evt);
     switch (evt) {
     case MM_CHANNEL_EVT_ADD_STREAM:
         {
@@ -471,7 +466,7 @@ int32_t mm_channel_fsm_fn_stopped(mm_channel_t *my_obj,
                    __func__, my_obj->state, evt);
         break;
     }
-    CDBG_ERROR("%s : E rc = %d", __func__, rc);
+    CDBG("%s : E rc = %d", __func__, rc);
     return rc;
 }
 
@@ -498,7 +493,7 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
 {
     int32_t rc = 0;
 
-    CDBG_ERROR("%s : E evt = %d", __func__, evt);
+    CDBG("%s : E evt = %d", __func__, evt);
     switch (evt) {
     case MM_CHANNEL_EVT_STOP:
         {
@@ -521,12 +516,6 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
         {
             uint32_t frame_idx = (uint32_t)in_val;
             rc = mm_channel_flush_super_buf_queue(my_obj, frame_idx);
-        }
-        break;
-    case MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE:
-        {
-            mm_camera_super_buf_notify_mode_t notify_mode = ( mm_camera_super_buf_notify_mode_t ) in_val;
-            rc = mm_channel_config_notify_mode(my_obj, notify_mode);
         }
         break;
     case MM_CHANNEL_EVT_SET_STREAM_PARM:
@@ -579,7 +568,7 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
                    __func__, my_obj->state, evt, in_val, out_val);
         break;
     }
-    CDBG_ERROR("%s : X rc = %d", __func__, rc);
+    CDBG("%s : X rc = %d", __func__, rc);
     return rc;
 }
 
@@ -645,7 +634,7 @@ int32_t mm_channel_init(mm_channel_t *my_obj,
         my_obj->bundle.superbuf_queue.attr = *attr;
     }
 
-    CDBG_ERROR("%s : Launch data poll thread in channel open", __func__);
+    CDBG("%s : Launch data poll thread in channel open", __func__);
     mm_camera_poll_thread_launch(&my_obj->poll_thread[0],
                                  MM_CAMERA_POLL_TYPE_DATA);
 
@@ -693,7 +682,7 @@ uint32_t mm_channel_add_stream(mm_channel_t *my_obj)
     uint32_t s_hdl = 0;
     mm_stream_t *stream_obj = NULL;
 
-    CDBG_ERROR("%s : E", __func__);
+    CDBG("%s : E", __func__);
     /* check available stream */
     for (idx = 0; idx < MAX_STREAM_NUM_IN_BUNDLE; idx++) {
         if (MM_STREAM_STATE_NOTUSED == my_obj->streams[idx].state) {
@@ -724,7 +713,7 @@ uint32_t mm_channel_add_stream(mm_channel_t *my_obj)
         pthread_mutex_destroy(&stream_obj->cb_lock);
         memset(stream_obj, 0, sizeof(mm_stream_t));
     }
-    CDBG_ERROR("%s : stream handle = %d", __func__, s_hdl);
+    CDBG("%s : stream handle = %d", __func__, s_hdl);
     return s_hdl;
 }
 
@@ -783,7 +772,7 @@ int32_t mm_channel_config_stream(mm_channel_t *my_obj,
 {
     int rc = -1;
     mm_stream_t * stream_obj = NULL;
-    CDBG_ERROR("%s : E stream ID = %d", __func__, stream_id);
+    CDBG("%s : E stream ID = %d", __func__, stream_id);
     stream_obj = mm_channel_util_get_stream_by_handler(my_obj, stream_id);
 
     if (NULL == stream_obj) {
@@ -796,7 +785,7 @@ int32_t mm_channel_config_stream(mm_channel_t *my_obj,
                           MM_STREAM_EVT_SET_FMT,
                           (void *)config,
                           NULL);
-    CDBG_ERROR("%s : X rc = %d",__func__,rc);
+    CDBG("%s : X rc = %d",__func__,rc);
     return rc;
 }
 
@@ -1150,44 +1139,6 @@ int32_t mm_channel_flush_super_buf_queue(mm_channel_t *my_obj, uint32_t frame_id
         memset(node, 0, sizeof(mm_camera_cmdcb_t));
         node->cmd_type = MM_CAMERA_CMD_TYPE_FLUSH_QUEUE;
         node->u.frame_idx = frame_idx;
-
-        /* enqueue to cmd thread */
-        cam_queue_enq(&(my_obj->cmd_thread.cmd_queue), node);
-
-        /* wake up cmd thread */
-        cam_sem_post(&(my_obj->cmd_thread.cmd_sem));
-    } else {
-        CDBG_ERROR("%s: No memory for mm_camera_node_t", __func__);
-        rc = -1;
-    }
-
-    return rc;
-}
-
-/*===========================================================================
- * FUNCTION   : mm_channel_config_notify_mode
- *
- * DESCRIPTION: configure notification mode
- *
- * PARAMETERS :
- *   @my_obj  : channel object
- *   @notify_mode : notification mode
- *
- * RETURN     : int32_t type of status
- *              0  -- success
- *              -1 -- failure
- *==========================================================================*/
-int32_t mm_channel_config_notify_mode(mm_channel_t *my_obj,
-                                      mm_camera_super_buf_notify_mode_t notify_mode)
-{
-    int32_t rc = 0;
-    mm_camera_cmdcb_t* node = NULL;
-
-    node = (mm_camera_cmdcb_t *)malloc(sizeof(mm_camera_cmdcb_t));
-    if (NULL != node) {
-        memset(node, 0, sizeof(mm_camera_cmdcb_t));
-        node->u.notify_mode = notify_mode;
-        node->cmd_type = MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY;
 
         /* enqueue to cmd thread */
         cam_queue_enq(&(my_obj->cmd_thread.cmd_queue), node);
@@ -1559,7 +1510,7 @@ int32_t mm_channel_superbuf_comp_and_enqueue(
     uint8_t buf_s_idx, i, found_super_buf, unmatched_bundles;
     struct cam_list *last_buf, *insert_before_buf;
 
-    CDBG_ERROR("%s: E", __func__);
+    CDBG("%s: E", __func__);
     for (buf_s_idx = 0; buf_s_idx < queue->num_streams; buf_s_idx++) {
         if (buf_info->stream_id == queue->bundled_streams[buf_s_idx]) {
             break;
@@ -1731,7 +1682,7 @@ int32_t mm_channel_superbuf_comp_and_enqueue(
 
     pthread_mutex_unlock(&queue->que.lock);
 
-    CDBG_ERROR("%s: X", __func__);
+    CDBG("%s: X", __func__);
     return 0;
 }
 
@@ -1826,7 +1777,7 @@ int32_t mm_channel_superbuf_bufdone_overflow(mm_channel_t* my_obj,
         return 0;
     }
 
-    CDBG_ERROR("%s: before match_cnt=%d, water_mark=%d",
+    CDBG("%s: before match_cnt=%d, water_mark=%d",
          __func__, queue->match_cnt, queue->attr.water_mark);
     /* bufdone overflowed bufs */
     pthread_mutex_lock(&queue->que.lock);
@@ -1842,7 +1793,7 @@ int32_t mm_channel_superbuf_bufdone_overflow(mm_channel_t* my_obj,
         }
     }
     pthread_mutex_unlock(&queue->que.lock);
-    CDBG_ERROR("%s: after match_cnt=%d, water_mark=%d",
+    CDBG("%s: after match_cnt=%d, water_mark=%d",
          __func__, queue->match_cnt, queue->attr.water_mark);
 
     return rc;

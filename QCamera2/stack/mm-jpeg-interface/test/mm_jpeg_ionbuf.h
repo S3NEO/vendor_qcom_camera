@@ -30,7 +30,7 @@
 #ifndef __MM_JPEG_IONBUF_H__
 #define __MM_JPEG_IONBUF_H__
 
-#include <string.h>
+
 #include <stdio.h>
 #include <linux/msm_ion.h>
 #include <sys/mman.h>
