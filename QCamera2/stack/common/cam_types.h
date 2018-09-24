@@ -670,7 +670,7 @@ typedef  struct {
 //All empty fields are assumed to be uint32_t
 //Update the parm_buffer_t accordingly!!!!
 
-
+//This has a length of 68 but we only have 60
 typedef enum {
    CAM_INTF_PARM_QUERY_FLASH4SNAP,
    CAM_INTF_PARM_EXPOSURE,
@@ -730,10 +730,8 @@ typedef enum {
    CAM_INTF_PARM_LLV,
    CAM_INTF_PARM_FIRMWARE_MODE,
    field_39, // Somewere after this the stream based parameters and CAM_INTF_PARM_MAX must be set, we put them directly here...!
-  /* stream based parameters */
    CAM_INTF_PARM_DO_REPROCESS,
    CAM_INTF_PARM_SET_BUNDLE,
-
    CAM_INTF_PARM_MAX
 } cam_intf_parm_type_t;
 
