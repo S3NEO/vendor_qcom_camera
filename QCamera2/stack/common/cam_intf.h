@@ -277,6 +277,18 @@ typedef union {
     INCLUDE(field_36,				    int32_t,			 1); //unknown
     INCLUDE(CAM_INTF_PARM_LLV,			    int32_t,			 1);
     INCLUDE(CAM_INTF_PARM_FIRMWARE_MODE,	    int32_t,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_0,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_1,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_2,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_3,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_4,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_5,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_6,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_7,		    int,			 1);
+    INCLUDE(CAM_INTF_PARM_SAMSUNG_8,		    int,			 53);
+
+    // it now matches the 0xd5 (69) sizeof from the stock cam
+
 } parm_type_t;
 
 /****************************DO NOT MODIFY BELOW THIS LINE!!!!*********************/
