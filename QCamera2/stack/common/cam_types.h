@@ -276,6 +276,9 @@ typedef struct{
     int32_t offset_y;
     int32_t stride;
     int32_t scanline;
+    // Samsung stuff here...
+    int32_t samsung;  // same as stride
+    int32_t samsung0; // same as scanline
 } cam_mp_len_offset_t;
 
 typedef struct {
@@ -286,9 +289,12 @@ typedef struct {
 
 typedef struct {
     int num_planes;
+
+    // Sammy likes to switch stuff around, u cant fool me!!!
+
     union {
-        cam_sp_len_offset_t sp;
         cam_mp_len_offset_t mp[VIDEO_MAX_PLANES];
+        cam_sp_len_offset_t sp;
     };
     uint32_t frame_len;
 } cam_frame_len_offset_t;

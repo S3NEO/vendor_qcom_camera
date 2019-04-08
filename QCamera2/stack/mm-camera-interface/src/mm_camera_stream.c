@@ -2253,11 +2253,15 @@ int32_t mm_stream_calc_offset_metadata(cam_dimension_t *dim,
         PAD_TO_SIZE(dim->width * dim->height, padding->plane_padding);
     buf_planes->plane_info.frame_len =
         buf_planes->plane_info.mp[0].len;
-
-    buf_planes->plane_info.mp[0].offset_x =0;
+    printf("%d", buf_planes->plane_info.frame_len);
+    buf_planes->plane_info.mp[0].offset_x = 0;
     buf_planes->plane_info.mp[0].offset_y = 0;
     buf_planes->plane_info.mp[0].stride = dim->width;
     buf_planes->plane_info.mp[0].scanline = dim->height;
+
+    // Samsung stuff dont ask me why its that pointer but it is correct this way...
+    buf_planes->plane_info.mp[0].samsung = dim->width;
+    buf_planes->plane_info.mp[0].samsung0 = dim->height;
     return rc;
 }
 
@@ -2554,6 +2558,12 @@ int32_t mm_stream_reg_buf_cb(mm_stream_t *my_obj,
     CDBG("%s: E, my_handle = 0x%x, fd = %d, state = %d",
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
 
+
+    printf("%d", sizeof(cam_padding_info_t));
+    printf("%d", sizeof(cam_frame_len_offset_t));
+    printf("%d", sizeof(mm_camera_cmd_thread_t));
+    printf("%d * 4??", sizeof(mm_stream_data_cb_t));
+    printf("%d", VIDEO_MAX_PLANES);
     pthread_mutex_lock(&my_obj->cb_lock);
     for (i=0 ;i < MM_CAMERA_STREAM_BUF_CB_MAX; i++) {
         if(NULL == my_obj->buf_cb[i].cb) {
