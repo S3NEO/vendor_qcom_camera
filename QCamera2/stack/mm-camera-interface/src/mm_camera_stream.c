@@ -820,6 +820,13 @@ int32_t mm_stream_config(mm_stream_t *my_obj,
     my_obj->buf_cb[0].user_data = config->userdata;
     my_obj->buf_cb[0].cb_count = -1; /* infinite by default */
 
+    // Samsung copied a mem_vtbl here from the config to my_obj lets just do that so too
+    my_obj->mem_vtbl.user_data = config->my_vtbl.user_data;
+    my_obj->mem_vtbl.get_bufs = config->my_vtbl.get_bufs;
+    my_obj->mem_vtbl.put_bufs = config->my_vtbl.put_bufs;
+    my_obj->mem_vtbl.invalidate_buf = config->my_vtbl.invalidate_buf;
+    my_obj->mem_vtbl.clean_invalidate_buf = config->my_vtbl.clean_invalidate_buf;
+
     rc = mm_stream_sync_info(my_obj);
     if (rc == 0) {
         rc = mm_stream_set_fmt(my_obj);
