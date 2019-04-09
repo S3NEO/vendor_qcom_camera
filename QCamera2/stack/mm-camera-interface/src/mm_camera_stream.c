@@ -820,6 +820,8 @@ int32_t mm_stream_config(mm_stream_t *my_obj,
     my_obj->buf_cb[0].user_data = config->userdata;
     my_obj->buf_cb[0].cb_count = -1; /* infinite by default */
 
+    config->my_vtbl = config->mem_vtbl;
+
     // Samsung copied a mem_vtbl here from the config to my_obj lets just do that so too
     my_obj->mem_vtbl.user_data = config->my_vtbl.user_data;
     my_obj->mem_vtbl.get_bufs = config->my_vtbl.get_bufs;

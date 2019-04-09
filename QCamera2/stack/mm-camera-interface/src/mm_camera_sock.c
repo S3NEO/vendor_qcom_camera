@@ -83,7 +83,7 @@ int mm_camera_socket_create(int cam_id, mm_camera_sock_type_t sock_type)
       CDBG_ERROR("%s: socket_fd=%d %s ", __func__, socket_fd, strerror(errno));
     }
 
-    CDBG("%s: socket_fd=%d %s", __func__, socket_fd, sock_addr.sun_path);
+    CDBG_ERROR("%s: socket_fd=%d %s", __func__, socket_fd, sock_addr.sun_path);
     return socket_fd;
 }
 
@@ -124,7 +124,7 @@ int mm_camera_socket_sendmsg(
     char control[CMSG_SPACE(sizeof(int))];
 
     if (msg == NULL) {
-      CDBG("%s: msg is NULL", __func__);
+      CDBG_ERROR("%s: msg is NULL", __func__);
       return -1;
     }
     memset(&msgh, 0, sizeof(msgh));
@@ -135,7 +135,7 @@ int mm_camera_socket_sendmsg(
     iov[0].iov_len = buf_size;
     msgh.msg_iov = iov;
     msgh.msg_iovlen = 1;
-    CDBG("%s: iov_len=%d", __func__, iov[0].iov_len);
+    CDBG_ERROR("%s: iov_len=%d", __func__, iov[0].iov_len);
 
     msgh.msg_control = NULL;
     msgh.msg_controllen = 0;
@@ -146,14 +146,14 @@ int mm_camera_socket_sendmsg(
       msgh.msg_controllen = sizeof(control);
       cmsghp = CMSG_FIRSTHDR(&msgh);
       if (cmsghp != NULL) {
-        CDBG("%s: Got ctrl msg pointer", __func__);
+        CDBG_ERROR("%s: Got ctrl msg pointer", __func__);
         cmsghp->cmsg_level = SOL_SOCKET;
         cmsghp->cmsg_type = SCM_RIGHTS;
         cmsghp->cmsg_len = CMSG_LEN(sizeof(int));
         *((int *)CMSG_DATA(cmsghp)) = sendfd;
-        CDBG("%s: cmsg data=%d", __func__, *((int *) CMSG_DATA(cmsghp)));
+        CDBG_ERROR("%s: cmsg data=%d", __func__, *((int *) CMSG_DATA(cmsghp)));
       } else {
-        CDBG("%s: ctrl msg NULL", __func__);
+        CDBG_ERROR("%s: ctrl msg NULL", __func__);
         return -1;
       }
     }
@@ -207,15 +207,15 @@ int mm_camera_socket_recvmsg(
       return rcvd_len;
     }
 
-    CDBG("%s:  msg_ctrl %p len %d", __func__, msgh.msg_control, msgh.msg_controllen);
+    CDBG_ERROR("%s:  msg_ctrl %p len %d", __func__, msgh.msg_control, msgh.msg_controllen);
 
     if( ((cmsghp = CMSG_FIRSTHDR(&msgh)) != NULL) &&
         (cmsghp->cmsg_len == CMSG_LEN(sizeof(int))) ) {
       if (cmsghp->cmsg_level == SOL_SOCKET &&
         cmsghp->cmsg_type == SCM_RIGHTS) {
-        CDBG("%s:  CtrlMsg is valid", __func__);
+        CDBG_ERROR("%s:  CtrlMsg is valid", __func__);
         rcvd_fd = *((int *) CMSG_DATA(cmsghp));
-        CDBG("%s:  Receieved fd=%d", __func__, rcvd_fd);
+        CDBG_ERROR("%s:  Receieved fd=%d", __func__, rcvd_fd);
       } else {
         CDBG_ERROR("%s:  Unexpected Control Msg. Line=%d", __func__, __LINE__);
       }
