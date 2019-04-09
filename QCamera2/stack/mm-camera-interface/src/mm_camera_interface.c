@@ -1412,6 +1412,8 @@ mm_camera_vtbl_t * camera_open(uint8_t camera_idx)
         return &g_cam_ctrl.cam_obj[camera_idx]->vtbl;
     }
 
+    printf("%d", sizeof(mm_camera_obj_t));
+
     cam_obj = (mm_camera_obj_t *)malloc(sizeof(mm_camera_obj_t));
     if(NULL == cam_obj) {
         pthread_mutex_unlock(&g_intf_lock);

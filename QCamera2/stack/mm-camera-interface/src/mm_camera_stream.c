@@ -213,6 +213,7 @@ static void mm_stream_data_notify(void* user_data)
     }
 
     memset(&buf_info, 0, sizeof(mm_camera_buf_info_t));
+    printf("%d", sizeof(mm_camera_buf_info_t));
     rc = mm_stream_read_msm_frame(my_obj, &buf_info, my_obj->frame_offset.num_planes);
     if (rc != 0) {
         return;

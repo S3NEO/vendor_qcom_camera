@@ -200,6 +200,15 @@ typedef struct {
     cam_padding_info_t padding_info;
     mm_camera_stream_mem_vtbl_t mem_vtbl;
     mm_camera_buf_notify_t stream_cb;
+
+    // This appears to be a mem_vtbl but why??? we already got on here anyways
+    int samsung_prop;
+    int samsung_prop0;
+    int samsung_prop1;
+    int samsung_prop2;
+    int samsung_prop3;
+
+    int cb;
     void *userdata;
 } mm_camera_stream_config_t;
 

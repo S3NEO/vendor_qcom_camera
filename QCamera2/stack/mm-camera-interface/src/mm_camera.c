@@ -724,6 +724,13 @@ uint32_t mm_camera_add_channel(mm_camera_obj_t *my_obj,
     uint8_t ch_idx = 0;
     uint32_t ch_hdl = 0;
 
+    printf("%d", sizeof(mm_channel_t) * 16);
+    printf("%d", sizeof(mm_camera_evt_obj_t));
+    printf("%d", sizeof(mm_camera_poll_thread_t));
+    printf("%d", sizeof(mm_camera_cmd_thread_t));
+    printf("%d", sizeof(mm_camera_vtbl_t));
+    printf("%d", sizeof(mm_camera_event_t));
+
     for(ch_idx = 0; ch_idx < MM_CAMERA_CHANNEL_MAX; ch_idx++) {
         if (MM_CHANNEL_STATE_NOTUSED == my_obj->ch[ch_idx].state) {
             ch_obj = &my_obj->ch[ch_idx];

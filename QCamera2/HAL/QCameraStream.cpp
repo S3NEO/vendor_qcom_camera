@@ -199,7 +199,7 @@ QCameraStream::~QCameraStream()
         int rc = mCamOps->unmap_stream_buf(mCamHandle,
                     mChannelHandle, mHandle, CAM_MAPPING_BUF_TYPE_STREAM_INFO, 0, -1);
         if (rc < 0) {
-            ALOGE("Failed to map stream info buffer");
+            ALOGE("%s: Failed to map stream info buffer", __func__);
         }
         mStreamInfoBuf->deallocate();
         delete mStreamInfoBuf;
@@ -251,7 +251,7 @@ int32_t QCameraStream::init(QCameraHeapMemory *streamInfoBuf,
                 mChannelHandle, mHandle, CAM_MAPPING_BUF_TYPE_STREAM_INFO,
                 0, -1, mStreamInfoBuf->getFd(0), mStreamInfoBuf->getSize(0));
     if (rc < 0) {
-        ALOGE("Failed to map stream info buffer");
+        ALOGE("%s: Failed to map stream info buffer", __func__);
         goto err1;
     }
 

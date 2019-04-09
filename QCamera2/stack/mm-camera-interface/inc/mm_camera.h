@@ -221,6 +221,7 @@ typedef struct mm_stream {
 
     uint8_t is_bundled; /* flag if stream is bundled */
 
+    // We dont know why samsung wants to do something with those in libmmcamera_interface but lets just dont ask why
     mm_camera_stream_mem_vtbl_t mem_vtbl; /* mem ops tbl */
 } mm_stream_t;
 
@@ -336,6 +337,16 @@ typedef struct mm_channel {
 
     /* reference to parent cam_obj */
     struct mm_camera_obj* cam_obj;
+
+    // Samsung stuff for zsl snapshots and AE bracketting
+    uint8_t start_snapshot;
+    uint8_t is_zsl_snapshot;
+    uint8_t samsung;
+    uint8_t samsung0;
+    uint8_t samsung1;
+    uint8_t samsung2;
+    uint8_t samsung3;
+    uint8_t samsung4;
 } mm_channel_t;
 
 /* struct to store information about pp cookie*/
@@ -360,6 +371,9 @@ typedef struct {
 } mm_camera_evt_obj_t;
 
 typedef struct mm_camera_obj {
+
+    pthread_mutex_t samsung;
+
     uint32_t my_hdl;
     int ref_count;
     int32_t ctrl_fd;
@@ -375,6 +389,9 @@ typedef struct mm_camera_obj {
     pthread_mutex_t evt_lock;
     pthread_cond_t evt_cond;
     mm_camera_event_t evt_rcvd;
+
+    int samsung_proprietary;
+
 } mm_camera_obj_t;
 
 typedef struct {
