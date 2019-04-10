@@ -546,10 +546,13 @@ int32_t mm_camera_set_parms(mm_camera_obj_t *my_obj,
 {
     int32_t rc = -1;
     int32_t value = 0;
+
+    CDBG("%s : E CAM_PRIV_PARM", __func__);
     if (parms !=  NULL) {
         rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_PARM, &value);
     }
     pthread_mutex_unlock(&my_obj->cam_lock);
+    CDBG("%s : X rc= %d", __func__, rc);
     return rc;
 }
 
@@ -601,6 +604,7 @@ int32_t mm_camera_do_auto_focus(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value = 0;
+    CDBG("%s : E CAM_PRIV_DO_AUTO_FOCUS", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_DO_AUTO_FOCUS, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
@@ -622,6 +626,7 @@ int32_t mm_camera_cancel_auto_focus(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value = 0;
+    CDBG("%s : E CAM_PRIV_CANCLE_AUTO_FOCUS", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_CANCEL_AUTO_FOCUS, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
@@ -645,6 +650,7 @@ int32_t mm_camera_prepare_snapshot(mm_camera_obj_t *my_obj,
 {
     int32_t rc = -1;
     int32_t value = do_af_flag;
+    CDBG("%s : E CAM_PRIV_PREPARE_SNAPSHOT", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_PREPARE_SNAPSHOT, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
@@ -666,7 +672,7 @@ int32_t mm_camera_start_zsl_snapshot(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value = 0;
-
+    CDBG("%s : E CAM_PRIV_START_ZSL_SNAPSHOT", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd,
              CAM_PRIV_START_ZSL_SNAPSHOT, &value);
 
@@ -690,6 +696,7 @@ int32_t mm_camera_stop_zsl_snapshot(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value;
+    CDBG("%s : E CAM_PRIV_STOP_ZSL_SNAPSHOT", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd,
              CAM_PRIV_STOP_ZSL_SNAPSHOT, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1159,9 +1166,9 @@ int32_t mm_camera_set_stream_parms(mm_camera_obj_t *my_obj,
         memset(&payload, 0, sizeof(payload));
         payload.stream_id = s_id;
         payload.parms = parms;
-
+	// MM_CHANNEL_EVT_SET_STREAM_PARM is 0xf in samsung 0xd for us....
         rc = mm_channel_fsm_fn(ch_obj,
-                               MM_CHANNEL_EVT_SET_STREAM_PARM,
+                               0xf,
                                (void *)&payload,
                                NULL);
     } else {
@@ -1589,7 +1596,7 @@ int32_t mm_camera_util_s_ctrl(int32_t fd,  uint32_t id, int32_t *value)
     }
     rc = ioctl(fd, VIDIOC_S_CTRL, &control);
 
-    CDBG("%s: fd=%d, S_CTRL, id=0x%x, value = 0x%x, rc = %d\n",
+    CDBG_ERROR("%s: fd=%d, S_CTRL, id=0x%x, value = 0x%x, rc = %d\n",
          __func__, fd, id, (uint32_t)value, rc);
     if (value != NULL) {
         *value = control.value;
