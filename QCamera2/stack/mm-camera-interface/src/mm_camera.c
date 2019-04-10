@@ -1168,7 +1168,7 @@ int32_t mm_camera_set_stream_parms(mm_camera_obj_t *my_obj,
         payload.parms = parms;
 	// MM_CHANNEL_EVT_SET_STREAM_PARM is 0xf in samsung 0xd for us....
         rc = mm_channel_fsm_fn(ch_obj,
-                               0xf,
+                               MM_CHANNEL_EVT_SET_STREAM_PARM,
                                (void *)&payload,
                                NULL);
     } else {

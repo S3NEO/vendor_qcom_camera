@@ -91,6 +91,7 @@ typedef struct {
         uint32_t frame_idx; /* frame idx boundary for flush superbuf queue*/
     } u;
 } mm_camera_cmdcb_t;
+//TODO 0x88 as size
 
 typedef void (*mm_camera_cmd_cb_t)(mm_camera_cmdcb_t * cmd_cb, void* user_data);
 
@@ -246,12 +247,16 @@ typedef enum {
     MM_CHANNEL_EVT_REQUEST_SUPER_BUF,
     MM_CHANNEL_EVT_CANCEL_REQUEST_SUPER_BUF,
     MM_CHANNEL_EVT_FLUSH_SUPER_BUF_QUEUE,
+    MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE, // no idea maybe something for notify requests???
+    MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL, // Pre kitkat zsl stuff
     MM_CHANNEL_EVT_MAP_STREAM_BUF,
     MM_CHANNEL_EVT_UNMAP_STREAM_BUF,
     MM_CHANNEL_EVT_SET_STREAM_PARM,
     MM_CHANNEL_EVT_GET_STREAM_PARM,
     MM_CHANNEL_EVT_DO_STREAM_ACTION,
     MM_CHANNEL_EVT_DELETE,
+    MM_CHANNEL_EVT_AE_BRACKETTING, // Samsung AE Bracketting
+    // Possibly more coming???
 } mm_channel_evt_type_t;
 
 typedef struct {
@@ -341,7 +346,7 @@ typedef struct mm_channel {
     // Samsung stuff for zsl snapshots and AE bracketting
     uint8_t start_snapshot;
     uint8_t is_zsl_snapshot;
-    uint8_t samsung;
+    uint8_t samsung; // the rest is also zsl stuff...
     uint8_t samsung0;
     uint8_t samsung1;
     uint8_t samsung2;

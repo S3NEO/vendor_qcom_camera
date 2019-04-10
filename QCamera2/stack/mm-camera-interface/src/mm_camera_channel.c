@@ -518,27 +518,18 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
             rc = mm_channel_flush_super_buf_queue(my_obj, frame_idx);
         }
         break;
-    case MM_CHANNEL_EVT_SET_STREAM_PARM:
-        {
-            mm_evt_paylod_set_get_stream_parms_t *payload =
-                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
-            rc = mm_channel_set_stream_parm(my_obj, payload);
-        }
-        break;
-    case MM_CHANNEL_EVT_GET_STREAM_PARM:
-        {
-            mm_evt_paylod_set_get_stream_parms_t *payload =
-                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
-            rc = mm_channel_get_stream_parm(my_obj, payload);
-        }
-        break;
-    case MM_CHANNEL_EVT_DO_STREAM_ACTION:
-        {
-            mm_evt_paylod_do_stream_action_t *payload =
-                (mm_evt_paylod_do_stream_action_t *)in_val;
-            rc = mm_channel_do_stream_action(my_obj, payload);
-        }
-        break;
+    case MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE:
+	{
+		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_CONFIG_NOTIFY_MODE", __func__);
+		//rc = mm_channel_proc_general_cmd(my_obj, frame_idx);
+	break;
+	}
+    case MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL:
+	{
+		// Samsung this is ancient (2011 era)....
+		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL", __func__);
+	}
+	break;
     case MM_CHANNEL_EVT_MAP_STREAM_BUF:
         {
             mm_evt_paylod_map_stream_buf_t *payload =
@@ -563,6 +554,32 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
             }
         }
         break;
+    case MM_CHANNEL_EVT_SET_STREAM_PARM:
+        {
+            mm_evt_paylod_set_get_stream_parms_t *payload =
+                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
+            rc = mm_channel_set_stream_parm(my_obj, payload);
+        }
+        break;
+    case MM_CHANNEL_EVT_GET_STREAM_PARM:
+        {
+            mm_evt_paylod_set_get_stream_parms_t *payload =
+                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
+            rc = mm_channel_get_stream_parm(my_obj, payload);
+        }
+        break;
+    case MM_CHANNEL_EVT_DO_STREAM_ACTION:
+        {
+            mm_evt_paylod_do_stream_action_t *payload =
+                (mm_evt_paylod_do_stream_action_t *)in_val;
+            rc = mm_channel_do_stream_action(my_obj, payload);
+        }
+        break;
+    case MM_CHANNEL_EVT_AE_BRACKETTING:
+	{
+		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_EVT_AE_BRACKETTING", __func__);
+	}
+	break;
     default:
         CDBG_ERROR("%s: invalid state (%d) for evt (%d), in(%p), out(%p)",
                    __func__, my_obj->state, evt, in_val, out_val);
@@ -1314,6 +1331,44 @@ int32_t mm_channel_map_stream_buf(mm_channel_t *my_obj,
 
     return rc;
 }
+//TODO
+#if 0
+/*===========================================================================
+ * FUNCTION   : mm_channel_proc_general_cmd
+ *
+ * DESCRIPTION: mapping stream buffer via domain socket to server
+ *
+ * PARAMETERS :
+ *   @my_obj       : channel object
+ *   @payload      : ptr to payload for mapping
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+int32_t mm_channel_proc_general_cmd(mm_channel_t *my_obj,
+                                  mm_evt_paylod_map_stream_buf_t *payload)
+{
+    int32_t rc = -1;
+    mm_stream_t* s_obj = mm_channel_util_get_stream_by_handler(my_obj,
+                                                               payload->stream_id);
+
+    cb_node = (mm_camera_cmdcb_t *)malloc(sizeof(mm_camera_cmdcb_t));
+    if (NULL != cb_node) {
+        rc = mm_stream_map_buf(s_obj,
+                               payload->buf_type,
+                               payload->buf_idx,
+                               payload->plane_idx,
+                               payload->fd,
+                               payload->size);
+    } else {
+	CDBG_ERROR("%s: No memory for mm_camera_node_t", __func__);
+    }
+
+    return rc;
+}
+
+#endif
 
 /*===========================================================================
  * FUNCTION   : mm_channel_unmap_stream_buf
