@@ -128,7 +128,6 @@ typedef struct{
   int min_required_pp_mask;
   int used_10BC;
   int used_10C0;
-  int used_10C4;
 } cam_capability_t;
 
 typedef enum {

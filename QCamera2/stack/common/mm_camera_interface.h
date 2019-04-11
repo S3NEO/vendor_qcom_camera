@@ -378,21 +378,15 @@ typedef struct {
     int32_t (*prepare_snapshot) (uint32_t camera_handle,
                                  int32_t do_af_flag);
 
-    /** start_zsl_snapshot: function definition for starting
-     *                    zsl snapshot.
+    /** qbuf: fucntion definition for queuing a frame buffer back to
+     *        kernel for reuse
      *    @camera_handle : camer handler
+     *    @ch_id : channel handler
+     *    @buf : a frame buffer to be queued back to kernel
      *  Return value: 0 -- success
      *                -1 -- failure
      **/
-    int32_t (*start_zsl_snapshot) (uint32_t camera_handle);
-
-    /** stop_zsl_snapshot: function definition for stopping
-     *                    zsl snapshot.
-     *    @camera_handle : camer handler
-     *  Return value: 0 -- success
-     *                -1 -- failure
-     **/
-    int32_t (*stop_zsl_snapshot) (uint32_t camera_handle);
+    int32_t (*dummy_function) (uint32_t camera_handle __unused);
 
     /** add_channel: fucntion definition for adding a channel
      *    @camera_handle : camer handler
@@ -613,6 +607,23 @@ typedef struct {
      **/
     int32_t (*flush_super_buf_queue) (uint32_t camera_handle,
                                       uint32_t ch_id, uint32_t frame_idx);
+
+    /** start_zsl_snapshot: function definition for starting
+     *                    zsl snapshot.
+     *    @camera_handle : camer handler
+     *  Return value: 0 -- success
+     *                -1 -- failure
+     **/
+    int32_t (*start_zsl_snapshot) (uint32_t camera_handle);
+
+    /** stop_zsl_snapshot: function definition for stopping
+     *                    zsl snapshot.
+     *    @camera_handle : camer handler
+     *  Return value: 0 -- success
+     *                -1 -- failure
+     **/
+    int32_t (*stop_zsl_snapshot) (uint32_t camera_handle);
+
 } mm_camera_ops_t;
 
 /** mm_camera_vtbl_t: virtual table for camera operations
