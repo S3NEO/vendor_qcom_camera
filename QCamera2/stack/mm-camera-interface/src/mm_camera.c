@@ -122,6 +122,7 @@ static void mm_camera_dispatch_app_event(mm_camera_cmdcb_t *cmd_cb,
     int i;
     mm_camera_event_t *event = &cmd_cb->u.evt;
     mm_camera_obj_t * my_obj = (mm_camera_obj_t *)user_data;
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != my_obj) {
         pthread_mutex_lock(&my_obj->cb_lock);
         for(i = 0; i < MM_CAMERA_EVT_ENTRY_MAX; i++) {
@@ -154,6 +155,7 @@ static void mm_camera_event_notify(void* user_data)
     int rc;
     mm_camera_cmdcb_t *node = NULL;
 
+    CDBG_ERROR("%s : E", __func__);
     mm_camera_obj_t *my_obj = (mm_camera_obj_t*)user_data;
     if (NULL != my_obj) {
         /* read evt */
@@ -219,6 +221,7 @@ int32_t mm_camera_enqueue_evt(mm_camera_obj_t *my_obj,
     int32_t rc = 0;
     mm_camera_cmdcb_t *node = NULL;
 
+    CDBG_ERROR("%s : E", __func__);
     node = (mm_camera_cmdcb_t *)malloc(sizeof(mm_camera_cmdcb_t));
     if (NULL != node) {
         memset(node, 0, sizeof(mm_camera_cmdcb_t));
@@ -257,7 +260,7 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
     uint8_t sleep_msec=MM_CAMERA_DEV_OPEN_RETRY_SLEEP;
     unsigned int cam_idx = 0;
 
-    CDBG("%s:  begin\n", __func__);
+    CDBG_ERROR("%s:  begin\n", __func__);
 
     snprintf(dev_name, sizeof(dev_name), "/dev/%s",
              mm_camera_util_get_dev_name(my_obj->my_hdl));
@@ -267,12 +270,12 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
     do{
         n_try--;
         my_obj->ctrl_fd = open(dev_name, O_RDWR | O_NONBLOCK);
-        CDBG("%s:  ctrl_fd = %d, errno == %d", __func__, my_obj->ctrl_fd, errno);
+        CDBG_ERROR("%s:  ctrl_fd = %d, errno == %d", __func__, my_obj->ctrl_fd, errno);
         if((my_obj->ctrl_fd > 0) || (errno != EIO) || (n_try <= 0 )) {
             CDBG_ERROR("%s:  opened, break out while loop", __func__);
             break;
         }
-        CDBG("%s:failed with I/O error retrying after %d milli-seconds",
+        CDBG_ERROR("%s:failed with I/O error retrying after %d milli-seconds",
              __func__, sleep_msec);
         usleep(sleep_msec * 1000);
     }while (n_try > 0);
@@ -289,12 +292,12 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
     do {
         n_try--;
         my_obj->ds_fd = mm_camera_socket_create(cam_idx, MM_CAMERA_SOCK_TYPE_UDP);
-        CDBG("%s:  ds_fd = %d, errno = %d", __func__, my_obj->ds_fd, errno);
+        CDBG_ERROR("%s:  ds_fd = %d, errno = %d", __func__, my_obj->ds_fd, errno);
         if((my_obj->ds_fd > 0) || (n_try <= 0 )) {
-            CDBG("%s:  opened, break out while loop", __func__);
+            CDBG_ERROR("%s:  opened, break out while loop", __func__);
             break;
         }
-        CDBG("%s:failed with I/O error retrying after %d milli-seconds",
+        CDBG_ERROR("%s:failed with I/O error retrying after %d milli-seconds",
              __func__, sleep_msec);
         usleep(sleep_msec * 1000);
     } while (n_try > 0);
@@ -310,19 +313,19 @@ int32_t mm_camera_open(mm_camera_obj_t *my_obj)
     pthread_mutex_init(&my_obj->evt_lock, NULL);
     pthread_cond_init(&my_obj->evt_cond, NULL);
 
-    CDBG("%s : Launch evt Thread in Cam Open",__func__);
+    CDBG_ERROR("%s : Launch evt Thread in Cam Open",__func__);
     mm_camera_cmd_thread_launch(&my_obj->evt_thread,
                                 mm_camera_dispatch_app_event,
                                 (void *)my_obj);
 
     /* launch event poll thread
      * we will add evt fd into event poll thread upon user first register for evt */
-    CDBG("%s : Launch evt Poll Thread in Cam Open", __func__);
+    CDBG_ERROR("%s : Launch evt Poll Thread in Cam Open", __func__);
     mm_camera_poll_thread_launch(&my_obj->evt_poll_thread,
                                  MM_CAMERA_POLL_TYPE_EVT);
     mm_camera_evt_sub(my_obj, TRUE);
 
-    CDBG("%s:  end (rc = %d)\n", __func__, rc);
+    CDBG_ERROR("%s:  end (rc = %d)\n", __func__, rc);
     /* we do not need to unlock cam_lock here before return
      * because for open, it's done within intf_lock */
     return rc;
@@ -358,13 +361,13 @@ on_error:
  *==========================================================================*/
 int32_t mm_camera_close(mm_camera_obj_t *my_obj)
 {
-    CDBG("%s : unsubscribe evt", __func__);
+    CDBG_ERROR("%s : unsubscribe evt", __func__);
     mm_camera_evt_sub(my_obj, FALSE);
 
-    CDBG("%s : Close evt Poll Thread in Cam Close",__func__);
+    CDBG_ERROR("%s : Close evt Poll Thread in Cam Close",__func__);
     mm_camera_poll_thread_release(&my_obj->evt_poll_thread);
 
-    CDBG("%s : Close evt cmd Thread in Cam Close",__func__);
+    CDBG_ERROR("%s : Close evt cmd Thread in Cam Close",__func__);
     mm_camera_cmd_thread_release(&my_obj->evt_thread);
 
     if(my_obj->ctrl_fd > 0) {
@@ -406,6 +409,7 @@ int32_t mm_camera_register_event_notify_internal(mm_camera_obj_t *my_obj,
     int rc = -1;
     mm_camera_evt_obj_t *evt_array = NULL;
 
+    CDBG_ERROR("%s : E", __func__);
     pthread_mutex_lock(&my_obj->cb_lock);
     evt_array = &my_obj->evt;
     if(evt_cb) {
@@ -455,6 +459,7 @@ int32_t mm_camera_register_event_notify(mm_camera_obj_t *my_obj,
                                         void * user_data)
 {
     int rc = -1;
+    CDBG_ERROR("%s : E", __func__);
     rc = mm_camera_register_event_notify_internal(my_obj,
                                                   evt_cb,
                                                   user_data);
@@ -484,6 +489,7 @@ int32_t mm_camera_qbuf(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj = NULL;
     ch_obj = mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     pthread_mutex_unlock(&my_obj->cam_lock);
 
     /* we always assume qbuf will be done before channel/stream is fully stopped
@@ -512,7 +518,7 @@ int32_t mm_camera_query_capability(mm_camera_obj_t *my_obj)
 {
     int32_t rc = 0;
     struct v4l2_capability cap;
-
+    CDBG_ERROR("%s : E", __func__);
     /* get camera capabilities */
     memset(&cap, 0, sizeof(cap));
     rc = ioctl(my_obj->ctrl_fd, VIDIOC_QUERYCAP, &cap);
@@ -547,12 +553,12 @@ int32_t mm_camera_set_parms(mm_camera_obj_t *my_obj,
     int32_t rc = -1;
     int32_t value = 0;
 
-    CDBG("%s : E CAM_PRIV_PARM", __func__);
+    CDBG_ERROR("%s : E CAM_PRIV_PARM", __func__);
     if (parms !=  NULL) {
         rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_PARM, &value);
     }
     pthread_mutex_unlock(&my_obj->cam_lock);
-    CDBG("%s : X rc= %d", __func__, rc);
+    CDBG_ERROR("%s : X rc= %d", __func__, rc);
     return rc;
 }
 
@@ -579,6 +585,7 @@ int32_t mm_camera_get_parms(mm_camera_obj_t *my_obj,
 {
     int32_t rc = -1;
     int32_t value = 0;
+    CDBG_ERROR("%s : E", __func__);
     if (parms != NULL) {
         rc = mm_camera_util_g_ctrl(my_obj->ctrl_fd, CAM_PRIV_PARM, &value);
     }
@@ -604,7 +611,7 @@ int32_t mm_camera_do_auto_focus(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value = 0;
-    CDBG("%s : E CAM_PRIV_DO_AUTO_FOCUS", __func__);
+    CDBG_ERROR("%s : E CAM_PRIV_DO_AUTO_FOCUS", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_DO_AUTO_FOCUS, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
@@ -626,7 +633,7 @@ int32_t mm_camera_cancel_auto_focus(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value = 0;
-    CDBG("%s : E CAM_PRIV_CANCLE_AUTO_FOCUS", __func__);
+    CDBG_ERROR("%s : E CAM_PRIV_CANCLE_AUTO_FOCUS", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_CANCEL_AUTO_FOCUS, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
@@ -650,7 +657,7 @@ int32_t mm_camera_prepare_snapshot(mm_camera_obj_t *my_obj,
 {
     int32_t rc = -1;
     int32_t value = do_af_flag;
-    CDBG("%s : E CAM_PRIV_PREPARE_SNAPSHOT", __func__);
+    CDBG_ERROR("%s : E CAM_PRIV_PREPARE_SNAPSHOT", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd, CAM_PRIV_PREPARE_SNAPSHOT, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
     return rc;
@@ -672,7 +679,7 @@ int32_t mm_camera_start_zsl_snapshot(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value = 0;
-    CDBG("%s : E CAM_PRIV_START_ZSL_SNAPSHOT", __func__);
+    CDBG_ERROR("%s : E CAM_PRIV_START_ZSL_SNAPSHOT", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd,
              CAM_PRIV_START_ZSL_SNAPSHOT, &value);
 
@@ -696,7 +703,7 @@ int32_t mm_camera_stop_zsl_snapshot(mm_camera_obj_t *my_obj)
 {
     int32_t rc = -1;
     int32_t value;
-    CDBG("%s : E CAM_PRIV_STOP_ZSL_SNAPSHOT", __func__);
+    CDBG_ERROR("%s : E CAM_PRIV_STOP_ZSL_SNAPSHOT", __func__);
     rc = mm_camera_util_s_ctrl(my_obj->ctrl_fd,
              CAM_PRIV_STOP_ZSL_SNAPSHOT, &value);
     pthread_mutex_unlock(&my_obj->cam_lock);
@@ -731,12 +738,7 @@ uint32_t mm_camera_add_channel(mm_camera_obj_t *my_obj,
     uint8_t ch_idx = 0;
     uint32_t ch_hdl = 0;
 
-    printf("%d", sizeof(mm_channel_t) * 16);
-    printf("%d", sizeof(mm_camera_evt_obj_t));
-    printf("%d", sizeof(mm_camera_poll_thread_t));
-    printf("%d", sizeof(mm_camera_cmd_thread_t));
-    printf("%d", sizeof(mm_camera_vtbl_t));
-    printf("%d", sizeof(mm_camera_event_t));
+    CDBG_ERROR("%s : E", __func__);
 
     for(ch_idx = 0; ch_idx < MM_CAMERA_CHANNEL_MAX; ch_idx++) {
         if (MM_CHANNEL_STATE_NOTUSED == my_obj->ch[ch_idx].state) {
@@ -783,6 +785,7 @@ int32_t mm_camera_del_channel(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -824,6 +827,7 @@ int32_t mm_camera_get_bundle_info(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -858,6 +862,7 @@ uint32_t mm_camera_add_stream(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -896,6 +901,7 @@ int32_t mm_camera_del_stream(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -936,6 +942,7 @@ int32_t mm_camera_config_stream(mm_camera_obj_t *my_obj,
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
     mm_evt_paylod_config_stream_t payload;
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -974,6 +981,7 @@ int32_t mm_camera_start_channel(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1009,6 +1017,7 @@ int32_t mm_camera_stop_channel(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1046,6 +1055,7 @@ int32_t mm_camera_request_super_buf(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1081,6 +1091,7 @@ int32_t mm_camera_cancel_super_buf_request(mm_camera_obj_t *my_obj, uint32_t ch_
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1116,6 +1127,7 @@ int32_t mm_camera_flush_super_buf_queue(mm_camera_obj_t *my_obj, uint32_t ch_id,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1159,6 +1171,7 @@ int32_t mm_camera_set_stream_parms(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1208,6 +1221,7 @@ int32_t mm_camera_get_stream_parms(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1256,6 +1270,7 @@ int32_t mm_camera_do_stream_action(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1315,11 +1330,13 @@ int32_t mm_camera_map_stream_buf(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
 
         memset(&payload, 0, sizeof(payload));
+	printf("%d: ",sizeof(payload));
         payload.stream_id = stream_id;
         payload.buf_type = buf_type;
         payload.buf_idx = buf_idx;
@@ -1373,6 +1390,7 @@ int32_t mm_camera_unmap_stream_buf(mm_camera_obj_t *my_obj,
     mm_channel_t * ch_obj =
         mm_camera_util_get_channel_by_handler(my_obj, ch_id);
 
+    CDBG_ERROR("%s : E", __func__);
     if (NULL != ch_obj) {
         pthread_mutex_lock(&ch_obj->ch_lock);
         pthread_mutex_unlock(&my_obj->cam_lock);
@@ -1412,6 +1430,7 @@ int32_t mm_camera_evt_sub(mm_camera_obj_t * my_obj,
     int32_t rc = 0;
     struct v4l2_event_subscription sub;
 
+    CDBG_ERROR("%s : E", __func__);
     memset(&sub, 0, sizeof(sub));
     sub.type = MSM_CAMERA_V4L2_EVENT_TYPE;
     sub.id = MSM_CAMERA_MSM_NOTIFY;
@@ -1458,6 +1477,7 @@ void mm_camera_util_wait_for_event(mm_camera_obj_t *my_obj,
                                    uint32_t evt_mask,
                                    int32_t *status)
 {
+    CDBG_ERROR("%s : E", __func__);
     pthread_mutex_lock(&my_obj->evt_lock);
     while (!(my_obj->evt_rcvd.server_event_type & evt_mask)) {
         pthread_cond_wait(&my_obj->evt_cond, &my_obj->evt_lock);
@@ -1490,6 +1510,7 @@ int32_t mm_camera_util_sendmsg(mm_camera_obj_t *my_obj,
 {
     int32_t rc = -1;
     int32_t status;
+    CDBG_ERROR("%s : E", __func__);
     if(mm_camera_socket_sendmsg(my_obj->ds_fd, msg, buf_size, sendfd) > 0) {
         /* wait for event that mapping/unmapping is done */
         mm_camera_util_wait_for_event(my_obj, CAM_EVENT_TYPE_MAP_UNMAP_DONE, &status);
@@ -1525,6 +1546,7 @@ int32_t mm_camera_map_buf(mm_camera_obj_t *my_obj,
 {
     int32_t rc = 0;
     cam_sock_packet_t packet;
+    CDBG_ERROR("%s : E", __func__);
     memset(&packet, 0, sizeof(cam_sock_packet_t));
     packet.msg_type = CAM_MAPPING_TYPE_FD_MAPPING;
     packet.payload.buf_map.type = buf_type;
@@ -1559,6 +1581,7 @@ int32_t mm_camera_unmap_buf(mm_camera_obj_t *my_obj,
 {
     int32_t rc = 0;
     cam_sock_packet_t packet;
+    CDBG_ERROR("%s : E", __func__);
     memset(&packet, 0, sizeof(cam_sock_packet_t));
     packet.msg_type = CAM_MAPPING_TYPE_FD_UNMAPPING;
     packet.payload.buf_unmap.type = buf_type;
@@ -1589,6 +1612,7 @@ int32_t mm_camera_util_s_ctrl(int32_t fd,  uint32_t id, int32_t *value)
     int rc = 0;
     struct v4l2_control control;
 
+    CDBG_ERROR("%s : E", __func__);
     memset(&control, 0, sizeof(control));
     control.id = id;
     if (value != NULL) {
@@ -1623,13 +1647,14 @@ int32_t mm_camera_util_g_ctrl( int32_t fd, uint32_t id, int32_t *value)
     int rc = 0;
     struct v4l2_control control;
 
+    CDBG_ERROR("%s : E", __func__);
     memset(&control, 0, sizeof(control));
     control.id = id;
     if (value != NULL) {
         control.value = *value;
     }
     rc = ioctl(fd, VIDIOC_G_CTRL, &control);
-    CDBG("%s: fd=%d, G_CTRL, id=0x%x, rc = %d\n", __func__, fd, id, rc);
+    CDBG_ERROR("%s: fd=%d, G_CTRL, id=0x%x, rc = %d\n", __func__, fd, id, rc);
     if (value != NULL) {
         *value = control.value;
     }

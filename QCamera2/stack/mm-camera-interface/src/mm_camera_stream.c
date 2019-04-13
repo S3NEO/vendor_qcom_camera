@@ -822,12 +822,14 @@ int32_t mm_stream_config(mm_stream_t *my_obj,
 
     config->my_vtbl = config->mem_vtbl;
 
+    CDBG_ERROR("before samsung");
     // Samsung copied a mem_vtbl here from the config to my_obj lets just do that so too
     my_obj->mem_vtbl.user_data = config->my_vtbl.user_data;
     my_obj->mem_vtbl.get_bufs = config->my_vtbl.get_bufs;
     my_obj->mem_vtbl.put_bufs = config->my_vtbl.put_bufs;
     my_obj->mem_vtbl.invalidate_buf = config->my_vtbl.invalidate_buf;
     my_obj->mem_vtbl.clean_invalidate_buf = config->my_vtbl.clean_invalidate_buf;
+    CDBG_ERROR("after samsung");
 
     rc = mm_stream_sync_info(my_obj);
     if (rc == 0) {
@@ -2575,8 +2577,39 @@ int32_t mm_stream_reg_buf_cb(mm_stream_t *my_obj,
     printf("%d", sizeof(cam_padding_info_t));
     printf("%d", sizeof(cam_frame_len_offset_t));
     printf("%d", sizeof(mm_camera_cmd_thread_t));
-    printf("%d * 4??", sizeof(mm_stream_data_cb_t));
-    printf("%d", VIDEO_MAX_PLANES);
+    printf("%d", sizeof(mm_stream_data_cb_t) * 4);
+    printf("%d", sizeof(mm_camera_cmdcb_type_t));
+    printf("%d", sizeof(mm_camera_buf_info_t));
+    printf("%d", sizeof(mm_camera_req_buf_t));
+    printf("%d", sizeof(mm_camera_super_buf_t));
+    printf("%d", sizeof(mm_camera_cmdcb_t));
+    printf("%d", sizeof(mm_camera_poll_thread_type_t));
+    printf("%d", sizeof(mm_camera_poll_entry_t));
+    printf("%d", sizeof(mm_camera_poll_thread_t));
+    printf("%d", sizeof(mm_camera_buf_notify_t));
+    printf("%d", sizeof(mm_stream_data_cb_t));
+    printf("%d", sizeof(mm_stream_buf_status_t));
+    printf("%d", sizeof(mm_stream_t));
+    printf("%d", sizeof(mm_evt_paylod_config_stream_t));
+    printf("%d", sizeof(mm_evt_paylod_set_get_stream_parms_t));
+    printf("%d", sizeof(mm_evt_paylod_do_stream_action_t));
+    printf("%d", sizeof(mm_evt_paylod_map_stream_buf_t));
+    printf("%d", sizeof(mm_evt_paylod_unmap_stream_buf_t));
+    printf("%d", sizeof(mm_channel_queue_node_t));
+    printf("%d", sizeof(mm_channel_queue_t));
+    printf("%d", sizeof(mm_channel_bundle_t));
+    printf("%d", sizeof(mm_channel_t));
+    printf("%d", sizeof(mm_channel_pp_info_t));
+    printf("%d", sizeof(mm_camera_evt_entry_t));
+    printf("%d", sizeof(mm_camera_evt_obj_t));
+    printf("%d", sizeof(mm_camera_obj_t));
+    printf("%d", sizeof(mm_camera_buf_def_t));
+    printf("%d", sizeof(mm_camera_event_t));
+    printf("%d", sizeof(mm_camera_map_unmap_ops_tbl_t));
+    printf("%d", sizeof(mm_camera_stream_mem_vtbl_t));
+    printf("%d", sizeof(mm_camera_stream_config_t));
+    printf("%d", sizeof(mm_camera_channel_attr_t));
+    printf("%d", sizeof(mm_camera_vtbl_t));
     pthread_mutex_lock(&my_obj->cb_lock);
     for (i=0 ;i < MM_CAMERA_STREAM_BUF_CB_MAX; i++) {
         if(NULL == my_obj->buf_cb[i].cb) {

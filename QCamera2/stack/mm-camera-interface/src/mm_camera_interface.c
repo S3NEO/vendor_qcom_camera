@@ -1348,36 +1348,42 @@ uint8_t get_num_of_cameras()
     return g_cam_ctrl.num_cam;
 }
 
+static int32_t mm_camera_intf_dummy_function(uint32_t camera_handle __unused){
+	CDBG_ERROR("%s: has been called, returning -1", __func__);
+	return -1;
+}
+
 /* camera ops v-table */
 static mm_camera_ops_t mm_camera_ops = {
     .query_capability = mm_camera_intf_query_capability,
     .register_event_notify = mm_camera_intf_register_event_notify,
     .close_camera = mm_camera_intf_close,
+    .map_buf = mm_camera_intf_map_buf,
+    .unmap_buf = mm_camera_intf_unmap_buf,
     .set_parms = mm_camera_intf_set_parms,
     .get_parms = mm_camera_intf_get_parms,
     .do_auto_focus = mm_camera_intf_do_auto_focus,
     .cancel_auto_focus = mm_camera_intf_cancel_auto_focus,
     .prepare_snapshot = mm_camera_intf_prepare_snapshot,
-    .start_zsl_snapshot = mm_camera_intf_start_zsl_snapshot,
-    .stop_zsl_snapshot = mm_camera_intf_stop_zsl_snapshot,
-    .map_buf = mm_camera_intf_map_buf,
-    .unmap_buf = mm_camera_intf_unmap_buf,
+    .dummy_function = mm_camera_intf_dummy_function,
     .add_channel = mm_camera_intf_add_channel,
     .delete_channel = mm_camera_intf_del_channel,
     .get_bundle_info = mm_camera_intf_get_bundle_info,
     .add_stream = mm_camera_intf_add_stream,
     .delete_stream = mm_camera_intf_del_stream,
     .config_stream = mm_camera_intf_config_stream,
-    .qbuf = mm_camera_intf_qbuf,
     .map_stream_buf = mm_camera_intf_map_stream_buf,
     .unmap_stream_buf = mm_camera_intf_unmap_stream_buf,
     .set_stream_parms = mm_camera_intf_set_stream_parms,
     .get_stream_parms = mm_camera_intf_get_stream_parms,
     .start_channel = mm_camera_intf_start_channel,
     .stop_channel = mm_camera_intf_stop_channel,
+    .qbuf = mm_camera_intf_qbuf,
     .request_super_buf = mm_camera_intf_request_super_buf,
     .cancel_super_buf_request = mm_camera_intf_cancel_super_buf_request,
-    .flush_super_buf_queue = mm_camera_intf_flush_super_buf_queue
+    .flush_super_buf_queue = mm_camera_intf_flush_super_buf_queue,
+    .start_zsl_snapshot = mm_camera_intf_start_zsl_snapshot, // figure those two out!!
+    .stop_zsl_snapshot = mm_camera_intf_stop_zsl_snapshot // maybe they arent used in sammy hal???,
 };
 
 /*===========================================================================

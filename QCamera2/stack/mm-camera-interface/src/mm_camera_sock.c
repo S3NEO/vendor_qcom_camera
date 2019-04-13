@@ -128,6 +128,7 @@ int mm_camera_socket_sendmsg(
       return -1;
     }
     memset(&msgh, 0, sizeof(msgh));
+    printf("%d", sizeof(msgh));
     msgh.msg_name = NULL;
     msgh.msg_namelen = 0;
 
