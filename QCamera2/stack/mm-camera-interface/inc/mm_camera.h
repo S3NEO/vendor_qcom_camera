@@ -88,6 +88,7 @@ typedef struct {
         mm_camera_event_t evt;       /* evt if evtCB */
         mm_camera_super_buf_t superbuf; /* superbuf if superbuf dataCB*/
         mm_camera_req_buf_t req_buf; /* num of buf requested */
+	char buffer[132];
         uint32_t frame_idx; /* frame idx boundary for flush superbuf queue*/
     } u;
 } mm_camera_cmdcb_t;

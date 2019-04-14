@@ -896,9 +896,11 @@ int32_t mm_stream_streamon(mm_stream_t *my_obj)
                                            my_obj->fd,
                                            mm_stream_data_notify,
                                            (void*)my_obj);
+    CDBG_ERROR("After poll_thread_add_poll_fd");
     if (rc < 0) {
         return rc;
     }
+    CDBG_ERROR("before streamon ioctl");
     rc = ioctl(my_obj->fd, VIDIOC_STREAMON, &buf_type);
     if (rc < 0) {
         CDBG_ERROR("%s: ioctl VIDIOC_STREAMON failed: rc=%d\n",

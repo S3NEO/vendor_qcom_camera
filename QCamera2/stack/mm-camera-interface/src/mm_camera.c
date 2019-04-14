@@ -95,6 +95,8 @@ uint8_t mm_camera_util_chip_is_a_family(void)
 {
     int id = 0;
     FILE *fp;
+
+    printf(" %d", sizeof(cam_metadata_info_t));
     if ((fp = fopen("/sys/devices/system/soc/soc0/id", "r")) != NULL) {
         fscanf(fp, "%d", &id);
         fclose(fp);

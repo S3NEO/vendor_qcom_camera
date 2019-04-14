@@ -81,7 +81,7 @@ static int32_t mm_camera_poll_sig(mm_camera_poll_thread_t *poll_cb,
     mm_camera_sig_evt_t cmd_evt;
     int len;
 
-    CDBG("%s: E cmd = %d", __func__,cmd);
+    CDBG_ERROR("%s: E cmd = %d", __func__,cmd);
     memset(&cmd_evt, 0, sizeof(cmd_evt));
     cmd_evt.cmd = cmd;
     pthread_mutex_lock(&poll_cb->mutex);
@@ -93,20 +93,20 @@ static int32_t mm_camera_poll_sig(mm_camera_poll_thread_t *poll_cb,
     if(len < 1) {
         CDBG_ERROR("%s: len = %d, errno = %d", __func__, len, errno);
     }
-    CDBG("%s: begin IN mutex write done, len = %d", __func__, len);
+    CDBG_ERROR("%s: begin IN mutex write done, len = %d", __func__, len);
     /* wait till worker task gives positive signal */
     if (FALSE == poll_cb->status) {
-        CDBG("%s: wait", __func__);
+        CDBG_ERROR("%s: wait", __func__);
         pthread_cond_wait(&poll_cb->cond_v, &poll_cb->mutex);
     }
     /* done */
     pthread_mutex_unlock(&poll_cb->mutex);
-    CDBG("%s: X", __func__);
+    CDBG_ERROR("%s: X", __func__);
     return 0;
 }
 
 /*===========================================================================
- * FUNCTION   : mm_camera_poll_sig
+ * FUNCTION   : mm_camera_poll_sig_done
  *
  * DESCRIPTION: signal the status of done
  *
@@ -120,7 +120,7 @@ static void mm_camera_poll_sig_done(mm_camera_poll_thread_t *poll_cb)
     pthread_mutex_lock(&poll_cb->mutex);
     poll_cb->status = TRUE;
     pthread_cond_signal(&poll_cb->cond_v);
-    CDBG("%s: done, in mutex", __func__);
+    CDBG_ERROR("%s: done, in mutex", __func__);
     pthread_mutex_unlock(&poll_cb->mutex);
 }
 
@@ -157,7 +157,7 @@ static void mm_camera_poll_proc_pipe(mm_camera_poll_thread_t *poll_cb)
     int i;
     mm_camera_sig_evt_t cmd_evt;
     read_len = read(poll_cb->pfds[0], &cmd_evt, sizeof(cmd_evt));
-    CDBG("%s: read_fd = %d, read_len = %d, expect_len = %d cmd = %d",
+    CDBG_ERROR("%s: read_fd = %d, read_len = %d, expect_len = %d cmd = %d",
          __func__, poll_cb->pfds[0], (int)read_len, (int)sizeof(cmd_evt), cmd_evt.cmd);
     switch (cmd_evt.cmd) {
     case MM_CAMERA_PIPE_CMD_POLL_ENTRIES_UPDATED:
@@ -220,7 +220,7 @@ static void *mm_camera_poll_fn(mm_camera_poll_thread_t *poll_cb)
 {
     int rc = 0, i;
 
-    CDBG("%s: poll type = %d, num_fd = %d poll_cb = %p\n",
+    CDBG_ERROR("%s: poll type = %d, num_fd = %d poll_cb = %p\n",
          __func__, poll_cb->poll_type, poll_cb->num_fds,poll_cb);
     do {
          for(i = 0; i < poll_cb->num_fds; i++) {
@@ -232,14 +232,14 @@ static void *mm_camera_poll_fn(mm_camera_poll_thread_t *poll_cb)
             if ((poll_cb->poll_fds[0].revents & POLLIN) &&
                 (poll_cb->poll_fds[0].revents & POLLRDNORM)) {
                 /* if we have data on pipe, we only process pipe in this iteration */
-                CDBG("%s: cmd received on pipe\n", __func__);
+                CDBG_ERROR("%s: cmd received on pipe\n", __func__);
                 mm_camera_poll_proc_pipe(poll_cb);
             } else {
                 for(i=1; i<poll_cb->num_fds; i++) {
                     /* Checking for ctrl events */
                     if ((poll_cb->poll_type == MM_CAMERA_POLL_TYPE_EVT) &&
                         (poll_cb->poll_fds[i].revents & POLLPRI)) {
-                        CDBG("%s: mm_camera_evt_notify\n", __func__);
+                        CDBG_ERROR("%s: mm_camera_evt_notify\n", __func__);
                         if (NULL != poll_cb->poll_entries[i-1].notify_cb) {
                             poll_cb->poll_entries[i-1].notify_cb(poll_cb->poll_entries[i-1].user_data);
                         }
@@ -248,7 +248,7 @@ static void *mm_camera_poll_fn(mm_camera_poll_thread_t *poll_cb)
                     if ((MM_CAMERA_POLL_TYPE_DATA == poll_cb->poll_type) &&
                         (poll_cb->poll_fds[i].revents & POLLIN) &&
                         (poll_cb->poll_fds[i].revents & POLLRDNORM)) {
-                        CDBG("%s: mm_stream_data_notify\n", __func__);
+                        CDBG_ERROR("%s: mm_stream_data_notify\n", __func__);
                         if (NULL != poll_cb->poll_entries[i-1].notify_cb) {
                             poll_cb->poll_entries[i-1].notify_cb(poll_cb->poll_entries[i-1].user_data);
                         }
@@ -408,7 +408,7 @@ int32_t mm_camera_poll_thread_launch(mm_camera_poll_thread_t * poll_cb,
 
     poll_cb->timeoutms = -1;  /* Infinite seconds */
 
-    CDBG("%s: poll_type = %d, read fd = %d, write fd = %d timeout = %d",
+    CDBG_ERROR("%s: poll_type = %d, read fd = %d, write fd = %d timeout = %d",
         __func__, poll_cb->poll_type,
         poll_cb->pfds[0], poll_cb->pfds[1],poll_cb->timeoutms);
 
@@ -423,7 +423,7 @@ int32_t mm_camera_poll_thread_launch(mm_camera_poll_thread_t * poll_cb,
         pthread_cond_wait(&poll_cb->cond_v, &poll_cb->mutex);
     }
     pthread_mutex_unlock(&poll_cb->mutex);
-    CDBG("%s: End",__func__);
+    CDBG_ERROR("%s: End",__func__);
     return rc;
 }
 
@@ -535,7 +535,7 @@ int32_t mm_camera_cmd_thread_stop(mm_camera_cmd_thread_t * cmd_thread)
 
     /* wait until cmd thread exits */
     if (pthread_join(cmd_thread->cmd_pid, NULL) != 0) {
-        CDBG("%s: pthread dead already\n", __func__);
+        CDBG_ERROR("%s: pthread dead already\n", __func__);
     }
     return rc;
 }

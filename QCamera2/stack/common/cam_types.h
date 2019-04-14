@@ -670,6 +670,8 @@ typedef  struct {
 
     char private_metadata[MAX_METADATA_PAYLOAD_SIZE];
 
+    char samsung_buffer[264244]; // newer HAL version we need to rebase :(
+
 } cam_metadata_info_t;
 
 //This has a unknown length so we keep it that long in case we need to add something...

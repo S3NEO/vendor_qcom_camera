@@ -7,7 +7,9 @@ LOCAL_CLANG_CFLAGS += \
         -Wno-error=strlcpy-strlcat-size \
         -Wno-error=gnu-designator \
         -Wno-error=unused-variable \
-	-Wno-error=format
+	-Wno-error=format \
+	-Wno-error=missing-field-initializers \
+	-Werror
 
 LOCAL_SRC_FILES := \
         QCamera2Factory.cpp \
@@ -24,7 +26,7 @@ LOCAL_SRC_FILES := \
         QCameraParameters.cpp \
         QCameraThermalAdapter.cpp
 
-LOCAL_CFLAGS = -Wall -Werror -DDEFAULT_ZSL_MODE_ON -DDEFAULT_DENOISE_MODE_ON
+LOCAL_CFLAGS = -Wall -Werror -Wextra -DDEFAULT_ZSL_MODE_ON -DDEFAULT_DENOISE_MODE_ON
 #Debug logs are enabled
 #LOCAL_CFLAGS += -DDISABLE_DEBUG_LOG
 
@@ -32,7 +34,8 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/../stack/common \
         frameworks/native/include/media/hardware \
         frameworks/native/include/media/openmax \
-        hardware/qcom/media/msm8974/libstagefrighthw \
+        hardware/qcom/media/libstagefrighthw \
+	hardware/qcom/display/libgralloc \
         $(LOCAL_PATH)/../../mm-image-codec/qexif \
         $(LOCAL_PATH)/../../mm-image-codec/qomx_core
 
@@ -46,6 +49,7 @@ endif
 
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
 LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include/media
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
 
 LOCAL_SHARED_LIBRARIES := libcamera_client liblog libhardware libutils libcutils libdl
 LOCAL_SHARED_LIBRARIES += libmmcamera_interface libmmjpeg_interface
