@@ -3094,7 +3094,7 @@ int32_t QCameraParameters::initDefaultParameters()
     set(KEY_QC_BRIGHTNESS_STEP, m_pCapability->brightness_ctrl.step);     // 1
     setBrightness(m_pCapability->brightness_ctrl.def_value);
 
-    /** Set Auto exposure
+    // Set Auto exposure
     String8 autoExposureValues = createValuesString(
             (int *)m_pCapability->supported_aec_modes,
             m_pCapability->supported_aec_modes_cnt,
@@ -3102,7 +3102,7 @@ int32_t QCameraParameters::initDefaultParameters()
             sizeof(AUTO_EXPOSURE_MAP) / sizeof(QCameraMap));
     set(KEY_QC_SUPPORTED_AUTO_EXPOSURE, autoExposureValues.string());
     setAutoExposure(AUTO_EXPOSURE_FRAME_AVG);
-    **/
+
     // Set Exposure Compensation
     set(KEY_MAX_EXPOSURE_COMPENSATION, m_pCapability->exposure_compensation_max); // 12
     set(KEY_MIN_EXPOSURE_COMPENSATION, m_pCapability->exposure_compensation_min); // -12
