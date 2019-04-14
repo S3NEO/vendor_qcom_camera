@@ -7,9 +7,7 @@ LOCAL_CLANG_CFLAGS += \
         -Wno-error=strlcpy-strlcat-size \
         -Wno-error=gnu-designator \
         -Wno-error=unused-variable \
-	-Wno-error=format \
-	-Wno-error=missing-field-initializers \
-	-Werror
+	-Wno-error=format
 
 LOCAL_SRC_FILES := \
         QCamera2Factory.cpp \
@@ -34,10 +32,10 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/../stack/common \
         frameworks/native/include/media/hardware \
         frameworks/native/include/media/openmax \
-        hardware/qcom/media/libstagefrighthw \
-	hardware/qcom/display/libgralloc \
+        hardware/qcom/media/msm8974/libstagefrighthw \
         $(LOCAL_PATH)/../../mm-image-codec/qexif \
-        $(LOCAL_PATH)/../../mm-image-codec/qomx_core
+        $(LOCAL_PATH)/../../mm-image-codec/qomx_core \
+	$(LOCAL_PATH)/../util
 
 ifneq ($(filter msm8974 msm8x74 msm8226,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_C_INCLUDES += \

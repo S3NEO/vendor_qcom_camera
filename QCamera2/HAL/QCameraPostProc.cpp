@@ -243,7 +243,7 @@ int32_t QCameraPostProcessor::getJpegEncodingConfig(mm_jpeg_encode_params_t& enc
     cam_dimension_t thumbnailSize;
     memset(&thumbnailSize, 0, sizeof(cam_dimension_t));
     m_parent->getThumbnailSize(thumbnailSize);
-    if (thumbnailSize.width == 0 && thumbnailSize.height == 0) {
+    if (thumbnailSize.width == 0 || thumbnailSize.height == 0) {
         // (0,0) means no thumbnail
         m_bThumbnailNeeded = FALSE;
     }
@@ -328,7 +328,8 @@ int32_t QCameraPostProcessor::getJpegEncodingConfig(mm_jpeg_encode_params_t& enc
         delete m_pJpegOutputMem;
         m_pJpegOutputMem = NULL;
     }
-    m_pJpegOutputMem = new QCameraStreamMemory(m_parent->mGetMemory);
+    m_pJpegOutputMem = new QCameraStreamMemory(m_parent->mGetMemory,
+                                               QCAMERA_ION_USE_CACHE);
     if (NULL == m_pJpegOutputMem) {
         ret = NO_MEMORY;
         ALOGE("%s : No memory for m_pJpegOutputMem", __func__);

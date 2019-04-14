@@ -91,7 +91,9 @@ typedef struct{
   cam_focus_mode_type supported_focus_modes[7];
   uint8_t supported_iso_modes_cnt;
   cam_iso_mode_type supported_iso_modes[7];
-  char field_FDC[32];
+    /* supported auto exposure modes */
+    uint8_t supported_aec_modes_cnt;
+    cam_auto_exposure_mode_type supported_aec_modes[CAM_AEC_MODE_MAX];
   int supported_focus_algos_cnt;
   cam_focus_algorithm_type supported_focus_algos[4];
   int exposure_compensation_min;
