@@ -1047,8 +1047,7 @@ int32_t QCameraPostProcessor::encodeData(qcamera_jpeg_data_t *jpeg_job_data,
     }
 
     // set rotation only when no online rotation or offline pp rotation is done before
-    if (!m_parent->needRotationReprocess() &&
-        !m_parent->needOnlineRotation()) {
+    if (!m_parent->needRotationReprocess()) {
         jpg_job.encode_job.rotation = m_parent->getJpegRotation();
     }
     ALOGV("%s: jpeg rotation is set to %d", __func__, jpg_job.encode_job.rotation);
