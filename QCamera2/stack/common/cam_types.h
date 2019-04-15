@@ -275,9 +275,8 @@ typedef struct{
     int32_t offset_y;
     int32_t stride;
     int32_t scanline;
-    // Samsung stuff here...
-    int32_t samsung;  // same as stride
-    int32_t samsung0; // same as scanline
+    int32_t width;    /* width without padding */
+    int32_t height;   /* height without padding */
 } cam_mp_len_offset_t;
 
 typedef struct {
@@ -467,6 +466,7 @@ typedef enum {
     CAM_EVENT_TYPE_MAP_UNMAP_DONE  = (1<<0),
     CAM_EVENT_TYPE_AUTO_FOCUS_DONE = (1<<1),
     CAM_EVENT_TYPE_ZOOM_DONE       = (1<<2),
+    CAM_EVENT_TYPE_DAEMON_DIED     = (1<<3),
     CAM_EVENT_TYPE_MAX
 } cam_event_type_t;
 
@@ -768,7 +768,7 @@ typedef struct {
 #define CAM_QCOM_FEATURE_REGISTER_FACE  (1<<6)
 #define CAM_QCOM_FEATURE_SHARPNESS      (1<<7)
 #define CAM_QCOM_FEATURE_VIDEO_HDR      (1<<8)
-#define CAM_QCOM_FEATURE_CAC 		(1<<9)
+#define CAM_QCOM_FEATURE_CAC            (1<<9)
 
 // Counter clock wise
 typedef enum {
@@ -841,5 +841,17 @@ typedef struct {
     /* pp feature config */
     cam_pp_feature_config_t pp_feature_config;
 } cam_stream_reproc_config_t;
+
+typedef struct {
+    uint8_t crop_enabled;
+    cam_rect_t input_crop;
+} cam_crop_param_t;
+
+typedef struct {
+    cam_denoise_param_t denoise;
+    cam_crop_param_t crop;
+    uint32_t flip;     /* 0 means no flip */
+    int32_t sharpness; /* 0 means no sharpness */
+} cam_per_frame_pp_config_t;
 
 #endif /* __QCAMERA_TYPES_H__ */

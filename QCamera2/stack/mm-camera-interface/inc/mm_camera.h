@@ -67,6 +67,7 @@ typedef enum
     MM_CAMERA_CMD_TYPE_EXIT,       /* EXIT */
     MM_CAMERA_CMD_TYPE_REQ_DATA_CB,/* request data */
     MM_CAMERA_CMD_TYPE_SUPER_BUF_DATA_CB,    /* superbuf dataB CMD */
+    MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY, /* configure notify mode */
     MM_CAMERA_CMD_TYPE_FLUSH_QUEUE, /* flush queue */
     MM_CAMERA_CMD_TYPE_MAX
 } mm_camera_cmdcb_type_t;
@@ -88,8 +89,8 @@ typedef struct {
         mm_camera_event_t evt;       /* evt if evtCB */
         mm_camera_super_buf_t superbuf; /* superbuf if superbuf dataCB*/
         mm_camera_req_buf_t req_buf; /* num of buf requested */
-	char buffer[132];
         uint32_t frame_idx; /* frame idx boundary for flush superbuf queue*/
+        mm_camera_super_buf_notify_mode_t notify_mode; /* notification mode */
     } u;
 } mm_camera_cmdcb_t;
 //TODO 0x88 as size
@@ -344,10 +345,10 @@ typedef struct mm_channel {
     /* reference to parent cam_obj */
     struct mm_camera_obj* cam_obj;
 
-    // Samsung stuff for zsl snapshots and AE bracketting
-    uint8_t start_snapshot;
-    uint8_t is_zsl_snapshot;
-    uint8_t samsung; // the rest is also zsl stuff...
+    /* control for zsl led */
+    uint8_t startZSlSnapshotCalled;
+    uint8_t needLEDFlash;
+
     uint8_t samsung0;
     uint8_t samsung1;
     uint8_t samsung2;
@@ -396,8 +397,7 @@ typedef struct mm_camera_obj {
     pthread_cond_t evt_cond;
     mm_camera_event_t evt_rcvd;
 
-    int samsung_proprietary;
-
+    pthread_mutex_t msg_lock; /* lock for sending msg through socket */
 } mm_camera_obj_t;
 
 typedef struct {
@@ -484,6 +484,9 @@ extern int32_t mm_camera_cancel_super_buf_request(mm_camera_obj_t *my_obj,
 extern int32_t mm_camera_flush_super_buf_queue(mm_camera_obj_t *my_obj,
                                                uint32_t ch_id,
                                                uint32_t frame_idx);
+extern int32_t mm_camera_config_channel_notify(mm_camera_obj_t *my_obj,
+                                               uint32_t ch_id,
+                                               mm_camera_super_buf_notify_mode_t notify_mode);
 extern int32_t mm_camera_set_stream_parms(mm_camera_obj_t *my_obj,
                                           uint32_t ch_id,
                                           uint32_t s_id,

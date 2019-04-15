@@ -109,8 +109,7 @@ typedef struct{
   uint8_t max_num_roi;
   uint8_t max_num_focus_areas;
   uint8_t max_num_metering_areas;
-  char field_1029;
-  char field_102A;
+  uint8_t max_zoom_step;                /* max zoom step value */
   char field_102B;
   cam_control_range_t brightness_ctrl;
   cam_control_range_t sharpness_ctrl;
@@ -127,7 +126,7 @@ typedef struct{
   int8_t min_num_pp_bufs;
   char field_10B6;
   char field_10B7;
-  int min_required_pp_mask;
+  uint32_t min_required_pp_mask;
   int used_10BC;
   int used_10C0;
 } cam_capability_t;
@@ -147,6 +146,8 @@ typedef struct {
     uint8_t meta_present;         /* if there is meta data associated with this reprocess frame */
     uint32_t meta_stream_handle;  /* meta data stream ID. only valid if meta_present != 0 */
     uint8_t meta_buf_index;       /* buf index to meta data buffer. only valid if meta_present != 0 */
+
+    cam_per_frame_pp_config_t frame_pp_config; /* per frame post-proc configuration */
 } cam_reprocess_param;
 
 typedef struct {

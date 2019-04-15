@@ -918,7 +918,44 @@ static int32_t mm_camera_intf_flush_super_buf_queue(uint32_t camera_handle,
     } else {
         pthread_mutex_unlock(&g_intf_lock);
     }
-    CDBG_ERROR("%s :X rc = %d", __func__, rc);
+    CDBG("%s :X rc = %d", __func__, rc);
+    return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : mm_camera_intf_configure_notify_mode
+ *
+ * DESCRIPTION: Configures channel notification mode
+ *
+ * PARAMETERS :
+ *   @camera_handle: camera handle
+ *   @ch_id        : channel handle
+ *   @notify_mode  : notification mode
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+static int32_t mm_camera_intf_configure_notify_mode(uint32_t camera_handle,
+                                                    uint32_t ch_id,
+                                                    mm_camera_super_buf_notify_mode_t notify_mode)
+{
+    int32_t rc = -1;
+    mm_camera_obj_t * my_obj = NULL;
+
+    CDBG("%s :E camera_handler = %d,ch_id = %d",
+         __func__, camera_handle, ch_id);
+    pthread_mutex_lock(&g_intf_lock);
+    my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
+
+    if(my_obj) {
+        pthread_mutex_lock(&my_obj->cam_lock);
+        pthread_mutex_unlock(&g_intf_lock);
+        rc = mm_camera_config_channel_notify(my_obj, ch_id, notify_mode);
+    } else {
+        pthread_mutex_unlock(&g_intf_lock);
+    }
+    CDBG("%s :X rc = %d", __func__, rc);
     return rc;
 }
 
@@ -1348,11 +1385,6 @@ uint8_t get_num_of_cameras()
     return g_cam_ctrl.num_cam;
 }
 
-static int32_t mm_camera_intf_dummy_function(uint32_t camera_handle __unused){
-	CDBG_ERROR("%s: has been called, returning -1", __func__);
-	return -1;
-}
-
 /* camera ops v-table */
 static mm_camera_ops_t mm_camera_ops = {
     .query_capability = mm_camera_intf_query_capability,
@@ -1365,7 +1397,7 @@ static mm_camera_ops_t mm_camera_ops = {
     .do_auto_focus = mm_camera_intf_do_auto_focus,
     .cancel_auto_focus = mm_camera_intf_cancel_auto_focus,
     .prepare_snapshot = mm_camera_intf_prepare_snapshot,
-    .dummy_function = mm_camera_intf_dummy_function,
+    .configure_notify_mode = mm_camera_intf_configure_notify_mode,
     .add_channel = mm_camera_intf_add_channel,
     .delete_channel = mm_camera_intf_del_channel,
     .get_bundle_info = mm_camera_intf_get_bundle_info,

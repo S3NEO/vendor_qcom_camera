@@ -67,6 +67,8 @@ int32_t mm_channel_request_super_buf(mm_channel_t *my_obj,
 int32_t mm_channel_cancel_super_buf_request(mm_channel_t *my_obj);
 int32_t mm_channel_flush_super_buf_queue(mm_channel_t *my_obj,
                                          uint32_t frame_idx);
+int32_t mm_channel_config_notify_mode(mm_channel_t *my_obj,
+                                      mm_camera_super_buf_notify_mode_t notify_mode);
 int32_t mm_channel_superbuf_flush(mm_channel_t* my_obj, mm_channel_queue_t * queue);
 int32_t mm_channel_set_stream_parm(mm_channel_t *my_obj,
                                    mm_evt_paylod_set_get_stream_parms_t *payload);
@@ -203,12 +205,25 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
         /* skip frames if needed */
         ch_obj->pending_cnt = cmd_cb->u.req_buf.num_buf_requested;
         mm_channel_superbuf_skip(ch_obj, &ch_obj->bundle.superbuf_queue);
+
+        if (ch_obj->pending_cnt > 0 && ch_obj->needLEDFlash == TRUE) {
+            CDBG_HIGH("%s: need flash, start zsl snapshot", __func__);
+            mm_camera_start_zsl_snapshot(ch_obj->cam_obj);
+            ch_obj->startZSlSnapshotCalled = TRUE;
+            ch_obj->needLEDFlash = FALSE;
+        } else if (ch_obj->pending_cnt == 0 && ch_obj->startZSlSnapshotCalled == TRUE) {
+            CDBG_HIGH("%s: got picture cancelled, stop zsl snapshot", __func__);
+            mm_camera_stop_zsl_snapshot(ch_obj->cam_obj);
+            ch_obj->startZSlSnapshotCalled = FALSE;
+            ch_obj->needLEDFlash = FALSE;
+        }
+    } else if (MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY == cmd_cb->cmd_type) {
+           ch_obj->bundle.superbuf_queue.attr.notify_mode = cmd_cb->u.notify_mode;
     } else if (MM_CAMERA_CMD_TYPE_FLUSH_QUEUE  == cmd_cb->cmd_type) {
         ch_obj->bundle.superbuf_queue.expected_frame_id = cmd_cb->u.frame_idx;
         mm_channel_superbuf_flush(ch_obj, &ch_obj->bundle.superbuf_queue);
         return;
     }
-
     notify_mode = ch_obj->bundle.superbuf_queue.attr.notify_mode;
 
     /* bufdone for overflowed bufs */
@@ -226,6 +241,12 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
                  __func__, ch_obj->pending_cnt);
             if (MM_CAMERA_SUPER_BUF_NOTIFY_BURST == notify_mode) {
                 ch_obj->pending_cnt--;
+
+                if (ch_obj->pending_cnt == 0 && ch_obj->startZSlSnapshotCalled == TRUE) {
+                    CDBG_HIGH("%s: received all frames requested, stop zsl snapshot", __func__);
+                    mm_camera_stop_zsl_snapshot(ch_obj->cam_obj);
+                    ch_obj->startZSlSnapshotCalled = FALSE;
+                }
             }
 
             /* dispatch superbuf */
@@ -519,11 +540,11 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
         }
         break;
     case MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE:
-	{
-		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_CONFIG_NOTIFY_MODE", __func__);
-		//rc = mm_channel_proc_general_cmd(my_obj, frame_idx);
-	break;
-	}
+        {
+            mm_camera_super_buf_notify_mode_t notify_mode = ( mm_camera_super_buf_notify_mode_t ) in_val;
+            rc = mm_channel_config_notify_mode(my_obj, notify_mode);
+        }
+        break;
     case MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL:
 	{
 		// Samsung this is ancient (2011 era)....
@@ -1171,6 +1192,44 @@ int32_t mm_channel_flush_super_buf_queue(mm_channel_t *my_obj, uint32_t frame_id
 }
 
 /*===========================================================================
+ * FUNCTION   : mm_channel_config_notify_mode
+ *
+ * DESCRIPTION: configure notification mode
+ *
+ * PARAMETERS :
+ *   @my_obj  : channel object
+ *   @notify_mode : notification mode
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+int32_t mm_channel_config_notify_mode(mm_channel_t *my_obj,
+                                      mm_camera_super_buf_notify_mode_t notify_mode)
+{
+    int32_t rc = 0;
+    mm_camera_cmdcb_t* node = NULL;
+
+    node = (mm_camera_cmdcb_t *)malloc(sizeof(mm_camera_cmdcb_t));
+    if (NULL != node) {
+        memset(node, 0, sizeof(mm_camera_cmdcb_t));
+        node->u.notify_mode = notify_mode;
+        node->cmd_type = MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY;
+
+        /* enqueue to cmd thread */
+        cam_queue_enq(&(my_obj->cmd_thread.cmd_queue), node);
+
+        /* wake up cmd thread */
+        cam_sem_post(&(my_obj->cmd_thread.cmd_sem));
+    } else {
+        CDBG_ERROR("%s: No memory for mm_camera_node_t", __func__);
+        rc = -1;
+    }
+
+    return rc;
+}
+
+/*===========================================================================
  * FUNCTION   : mm_channel_qbuf
  *
  * DESCRIPTION: enqueue buffer back to kernel
@@ -1331,44 +1390,6 @@ int32_t mm_channel_map_stream_buf(mm_channel_t *my_obj,
 
     return rc;
 }
-//TODO
-#if 0
-/*===========================================================================
- * FUNCTION   : mm_channel_proc_general_cmd
- *
- * DESCRIPTION: mapping stream buffer via domain socket to server
- *
- * PARAMETERS :
- *   @my_obj       : channel object
- *   @payload      : ptr to payload for mapping
- *
- * RETURN     : int32_t type of status
- *              0  -- success
- *              -1 -- failure
- *==========================================================================*/
-int32_t mm_channel_proc_general_cmd(mm_channel_t *my_obj,
-                                  mm_evt_paylod_map_stream_buf_t *payload)
-{
-    int32_t rc = -1;
-    mm_stream_t* s_obj = mm_channel_util_get_stream_by_handler(my_obj,
-                                                               payload->stream_id);
-
-    cb_node = (mm_camera_cmdcb_t *)malloc(sizeof(mm_camera_cmdcb_t));
-    if (NULL != cb_node) {
-        rc = mm_stream_map_buf(s_obj,
-                               payload->buf_type,
-                               payload->buf_idx,
-                               payload->plane_idx,
-                               payload->fd,
-                               payload->size);
-    } else {
-	CDBG_ERROR("%s: No memory for mm_camera_node_t", __func__);
-    }
-
-    return rc;
-}
-
-#endif
 
 /*===========================================================================
  * FUNCTION   : mm_channel_unmap_stream_buf
@@ -1515,15 +1536,19 @@ int32_t mm_channel_handle_metadata(
             goto end;
         }
 
-        if (metadata->is_prep_snapshot_done_valid &&
-            metadata->prep_snapshot_done_state == NEED_FUTURE_FRAME) {
+        if (metadata->is_prep_snapshot_done_valid) {
+            if (metadata->prep_snapshot_done_state == NEED_FUTURE_FRAME) {
+                /* Set expected frame id to a future frame idx, large enough to wait
+                 * for good_frame_idx_range, and small enough to still capture an image */
+                const int max_future_frame_offset = 100;
+                queue->expected_frame_id += max_future_frame_offset;
 
-            /* Set expected frame id to a future frame idx, large enough to wait
-             * for good_frame_idx_range, and small enough to still capture an image */
-            const int max_future_frame_offset = 100;
-            queue->expected_frame_id += max_future_frame_offset;
+                mm_channel_superbuf_flush(ch_obj, queue);
 
-            mm_channel_superbuf_flush(ch_obj, queue);
+                ch_obj->needLEDFlash = TRUE;
+            } else {
+                ch_obj->needLEDFlash = FALSE;
+            }
         } else if (metadata->is_good_frame_idx_range_valid) {
             if (metadata->good_frame_idx_range.min_frame_idx >
                 queue->expected_frame_id) {

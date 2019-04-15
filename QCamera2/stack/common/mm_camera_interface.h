@@ -66,6 +66,7 @@ typedef struct {
     uint32_t stream_id;
     cam_stream_type_t stream_type;
     int8_t buf_idx;
+    uint8_t is_uv_subsampled;
     struct timespec ts;
     uint32_t frame_idx;
     int8_t num_planes;
@@ -378,15 +379,17 @@ typedef struct {
     int32_t (*prepare_snapshot) (uint32_t camera_handle,
                                  int32_t do_af_flag);
 
-    /** qbuf: fucntion definition for queuing a frame buffer back to
-     *        kernel for reuse
-     *    @camera_handle : camer handler
+    /** configure_notify_mode: function definition for configuring the
+     *                         notification mode of channel
+     *    @camera_handle : camera handler
      *    @ch_id : channel handler
-     *    @buf : a frame buffer to be queued back to kernel
+     *    @notify_mode : notification mode
      *  Return value: 0 -- success
      *                -1 -- failure
      **/
-    int32_t (*dummy_function) (uint32_t camera_handle __unused);
+    int32_t (*configure_notify_mode) (uint32_t camera_handle,
+                                      uint32_t ch_id,
+                                      mm_camera_super_buf_notify_mode_t notify_mode);
 
     /** add_channel: fucntion definition for adding a channel
      *    @camera_handle : camer handler
