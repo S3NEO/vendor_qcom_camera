@@ -3927,6 +3927,10 @@ bool QCamera2HardwareInterface::isCACEnabled()
  *==========================================================================*/
 bool QCamera2HardwareInterface::needReprocess()
 {
+
+    ALOGE("%s: YUV Sensor: Reprocessing disabled by default", __func__);
+    return false;
+
     if (!mParameters.isJpegPictureFormat()) {
         // RAW image, no need to reprocess
         return false;
@@ -3954,6 +3958,10 @@ bool QCamera2HardwareInterface::needReprocess()
  *==========================================================================*/
 bool QCamera2HardwareInterface::needRotationReprocess()
 {
+
+    ALOGE("%s: YUV Sensor: Reprocessing disabled by default", __func__);
+    return false;
+
     if (!mParameters.isJpegPictureFormat()) {
         // RAW image, no need to reprocess
         return false;
