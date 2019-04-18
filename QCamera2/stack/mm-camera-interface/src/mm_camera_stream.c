@@ -1611,6 +1611,7 @@ uint32_t mm_stream_get_v4l2_fmt(cam_format_t fmt)
     uint32_t val;
     switch(fmt) {
     case CAM_FORMAT_YUV_420_NV12:
+    case CAM_FORMAT_YUV_420_NV12_VENUS:
         val = V4L2_PIX_FMT_NV12;
         break;
     case CAM_FORMAT_YUV_420_NV21:
@@ -2324,8 +2325,8 @@ int32_t mm_stream_calc_offset_metadata(cam_dimension_t *dim,
         PAD_TO_SIZE(dim->width * dim->height, padding->plane_padding);
     buf_planes->plane_info.frame_len =
         buf_planes->plane_info.mp[0].len;
-    printf("%d", buf_planes->plane_info.frame_len);
-    buf_planes->plane_info.mp[0].offset_x = 0;
+
+    buf_planes->plane_info.mp[0].offset_x =0;
     buf_planes->plane_info.mp[0].offset_y = 0;
     buf_planes->plane_info.mp[0].stride = dim->width;
     buf_planes->plane_info.mp[0].scanline = dim->height;
