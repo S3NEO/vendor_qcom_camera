@@ -3713,7 +3713,7 @@ void QCamera2HardwareInterface::returnStreamBuffer(void *data, void *cookie)
  *              NO_ERROR  -- success
  *              none-zero failure code
  *==========================================================================*/
-int32_t QCamera2HardwareInterface::processHistogramStats(cam_hist_stats_t &/*stats_data*/)
+int32_t QCamera2HardwareInterface::processHistogramStats(cam_hist_stats_t &stats_data)
 {
     if (!mParameters.isHistogramEnabled()) {
         ALOGD("%s: Histogram not enabled, no ops here", __func__);
@@ -3736,6 +3736,24 @@ int32_t QCamera2HardwareInterface::processHistogramStats(cam_hist_stats_t &/*sta
         return UNKNOWN_ERROR;
     }
 
+    switch (stats_data.type) {
+    case CAM_HISTOGRAM_TYPE_BAYER:
+        *pHistData = stats_data.bayer_stats.gb_stats;
+        break;
+    case CAM_HISTOGRAM_TYPE_YUV:
+        *pHistData = stats_data.yuv_stats;
+        break;
+    }
+
+    qcamera_callback_argm_t cbArg;
+    memset(&cbArg, 0, sizeof(qcamera_callback_argm_t));
+    cbArg.cb_type = QCAMERA_DATA_CALLBACK;
+    cbArg.msg_type = CAMERA_MSG_STATS_DATA;
+    cbArg.data = histBuffer;
+    cbArg.user_data = histBuffer;
+    cbArg.cookie = this;
+    cbArg.release_cb = releaseCameraMemory;
+    m_cbNotifier.notifyCallback(cbArg);
 
     return NO_ERROR;
 }

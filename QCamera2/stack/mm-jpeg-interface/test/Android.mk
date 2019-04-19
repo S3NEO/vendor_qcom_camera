@@ -24,13 +24,19 @@ LOCAL_C_INCLUDES += $(OMX_HEADER_DIR)
 LOCAL_C_INCLUDES += $(OMX_CORE_DIR)/qexif
 LOCAL_C_INCLUDES += $(OMX_CORE_DIR)/qomx_core
 
+ifneq ($(strip $(USE_BIONIC_HEADER)),true)
+LOCAL_C_INCLUDES += $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr/include
+LOCAL_C_INCLUDES += hardware/qcom/camera
+endif
+LOCAL_ADDITIONAL_DEPENDENCIES := $(TARGET_OUT_INTERMEDIATES)/KERNEL_OBJ/usr
+
 
 LOCAL_SRC_FILES := mm_jpeg_ionbuf.c
 LOCAL_SRC_FILES += mm_jpeg_test.c 
 
 LOCAL_MODULE           := mm-jpeg-interface-test
 LOCAL_PRELINK_MODULE   := false
-LOCAL_SHARED_LIBRARIES := liblog libcutils libdl libmmjpeg_interface
+LOCAL_SHARED_LIBRARIES := libcutils libdl libmmjpeg_interface
 
 include $(BUILD_EXECUTABLE)
 

@@ -64,9 +64,6 @@ typedef enum {
     CAM_POSITION_FRONT
 } cam_position_t;
 
-//We have an additional unknown camera format in cam_format_t,
-//add one to fix this redefinition of MAX
-
 typedef enum {
     CAM_FORMAT_JPEG = 0,
     CAM_FORMAT_YUV_420_NV12 = 1,

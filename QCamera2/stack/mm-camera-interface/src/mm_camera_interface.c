@@ -332,6 +332,66 @@ static int32_t mm_camera_intf_prepare_snapshot(uint32_t camera_handle,
 }
 
 /*===========================================================================
+ * FUNCTION   : mm_camera_intf_start_zsl_snapshot
+ *
+ * DESCRIPTION: start zsl snapshot
+ *
+ * PARAMETERS :
+ *   @camera_handle: camera handle
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+static int32_t mm_camera_intf_start_zsl_snapshot(uint32_t camera_handle)
+{
+    int32_t rc = -1;
+    mm_camera_obj_t * my_obj = NULL;
+
+    pthread_mutex_lock(&g_intf_lock);
+    my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
+
+    if(my_obj) {
+        pthread_mutex_lock(&my_obj->cam_lock);
+        pthread_mutex_unlock(&g_intf_lock);
+        rc = mm_camera_start_zsl_snapshot(my_obj);
+    } else {
+        pthread_mutex_unlock(&g_intf_lock);
+    }
+    return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : mm_camera_intf_stop_zsl_snapshot
+ *
+ * DESCRIPTION: stop zsl snapshot
+ *
+ * PARAMETERS :
+ *   @camera_handle: camera handle
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+static int32_t mm_camera_intf_stop_zsl_snapshot(uint32_t camera_handle)
+{
+    int32_t rc = -1;
+    mm_camera_obj_t * my_obj = NULL;
+
+    pthread_mutex_lock(&g_intf_lock);
+    my_obj = mm_camera_util_get_camera_by_handler(camera_handle);
+
+    if(my_obj) {
+        pthread_mutex_lock(&my_obj->cam_lock);
+        pthread_mutex_unlock(&g_intf_lock);
+        rc = mm_camera_stop_zsl_snapshot(my_obj);
+    } else {
+        pthread_mutex_unlock(&g_intf_lock);
+    }
+    return rc;
+}
+
+/*===========================================================================
  * FUNCTION   : mm_camera_intf_close
  *
  * DESCRIPTION: close a camera by its handle
@@ -1330,30 +1390,32 @@ static mm_camera_ops_t mm_camera_ops = {
     .query_capability = mm_camera_intf_query_capability,
     .register_event_notify = mm_camera_intf_register_event_notify,
     .close_camera = mm_camera_intf_close,
-    .map_buf = mm_camera_intf_map_buf,
-    .unmap_buf = mm_camera_intf_unmap_buf,
     .set_parms = mm_camera_intf_set_parms,
     .get_parms = mm_camera_intf_get_parms,
     .do_auto_focus = mm_camera_intf_do_auto_focus,
     .cancel_auto_focus = mm_camera_intf_cancel_auto_focus,
     .prepare_snapshot = mm_camera_intf_prepare_snapshot,
-    .configure_notify_mode = mm_camera_intf_configure_notify_mode,
+    .start_zsl_snapshot = mm_camera_intf_start_zsl_snapshot,
+    .stop_zsl_snapshot = mm_camera_intf_stop_zsl_snapshot,
+    .map_buf = mm_camera_intf_map_buf,
+    .unmap_buf = mm_camera_intf_unmap_buf,
     .add_channel = mm_camera_intf_add_channel,
     .delete_channel = mm_camera_intf_del_channel,
     .get_bundle_info = mm_camera_intf_get_bundle_info,
     .add_stream = mm_camera_intf_add_stream,
     .delete_stream = mm_camera_intf_del_stream,
     .config_stream = mm_camera_intf_config_stream,
+    .qbuf = mm_camera_intf_qbuf,
     .map_stream_buf = mm_camera_intf_map_stream_buf,
     .unmap_stream_buf = mm_camera_intf_unmap_stream_buf,
     .set_stream_parms = mm_camera_intf_set_stream_parms,
     .get_stream_parms = mm_camera_intf_get_stream_parms,
     .start_channel = mm_camera_intf_start_channel,
     .stop_channel = mm_camera_intf_stop_channel,
-    .qbuf = mm_camera_intf_qbuf,
     .request_super_buf = mm_camera_intf_request_super_buf,
     .cancel_super_buf_request = mm_camera_intf_cancel_super_buf_request,
     .flush_super_buf_queue = mm_camera_intf_flush_super_buf_queue,
+    .configure_notify_mode = mm_camera_intf_configure_notify_mode
 };
 
 /*===========================================================================

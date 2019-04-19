@@ -205,18 +205,6 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
         /* skip frames if needed */
         ch_obj->pending_cnt = cmd_cb->u.req_buf.num_buf_requested;
         mm_channel_superbuf_skip(ch_obj, &ch_obj->bundle.superbuf_queue);
-
-        if (ch_obj->pending_cnt > 0 && ch_obj->needLEDFlash == TRUE) {
-            CDBG_HIGH("%s: need flash, start zsl snapshot", __func__);
-            mm_camera_start_zsl_snapshot(ch_obj->cam_obj);
-            ch_obj->startZSlSnapshotCalled = TRUE;
-            ch_obj->needLEDFlash = FALSE;
-        } else if (ch_obj->pending_cnt == 0 && ch_obj->startZSlSnapshotCalled == TRUE) {
-            CDBG_HIGH("%s: got picture cancelled, stop zsl snapshot", __func__);
-            mm_camera_stop_zsl_snapshot(ch_obj->cam_obj);
-            ch_obj->startZSlSnapshotCalled = FALSE;
-            ch_obj->needLEDFlash = FALSE;
-        }
     } else if (MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY == cmd_cb->cmd_type) {
            ch_obj->bundle.superbuf_queue.attr.notify_mode = cmd_cb->u.notify_mode;
     } else if (MM_CAMERA_CMD_TYPE_FLUSH_QUEUE  == cmd_cb->cmd_type) {
@@ -241,12 +229,6 @@ static void mm_channel_process_stream_buf(mm_camera_cmdcb_t * cmd_cb,
                  __func__, ch_obj->pending_cnt);
             if (MM_CAMERA_SUPER_BUF_NOTIFY_BURST == notify_mode) {
                 ch_obj->pending_cnt--;
-
-                if (ch_obj->pending_cnt == 0 && ch_obj->startZSlSnapshotCalled == TRUE) {
-                    CDBG_HIGH("%s: received all frames requested, stop zsl snapshot", __func__);
-                    mm_camera_stop_zsl_snapshot(ch_obj->cam_obj);
-                    ch_obj->startZSlSnapshotCalled = FALSE;
-                }
             }
 
             /* dispatch superbuf */
@@ -545,12 +527,27 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
             rc = mm_channel_config_notify_mode(my_obj, notify_mode);
         }
         break;
-    case MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL:
-	{
-		// Samsung this is ancient (2011 era)....
-		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL", __func__);
-	}
-	break;
+    case MM_CHANNEL_EVT_SET_STREAM_PARM:
+        {
+            mm_evt_paylod_set_get_stream_parms_t *payload =
+                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
+            rc = mm_channel_set_stream_parm(my_obj, payload);
+        }
+        break;
+    case MM_CHANNEL_EVT_GET_STREAM_PARM:
+        {
+            mm_evt_paylod_set_get_stream_parms_t *payload =
+                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
+            rc = mm_channel_get_stream_parm(my_obj, payload);
+        }
+        break;
+    case MM_CHANNEL_EVT_DO_STREAM_ACTION:
+        {
+            mm_evt_paylod_do_stream_action_t *payload =
+                (mm_evt_paylod_do_stream_action_t *)in_val;
+            rc = mm_channel_do_stream_action(my_obj, payload);
+        }
+        break;
     case MM_CHANNEL_EVT_MAP_STREAM_BUF:
         {
             mm_evt_paylod_map_stream_buf_t *payload =
@@ -575,27 +572,12 @@ int32_t mm_channel_fsm_fn_active(mm_channel_t *my_obj,
             }
         }
         break;
-    case MM_CHANNEL_EVT_SET_STREAM_PARM:
-        {
-            mm_evt_paylod_set_get_stream_parms_t *payload =
-                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
-            rc = mm_channel_set_stream_parm(my_obj, payload);
-        }
-        break;
-    case MM_CHANNEL_EVT_GET_STREAM_PARM:
-        {
-            mm_evt_paylod_set_get_stream_parms_t *payload =
-                (mm_evt_paylod_set_get_stream_parms_t *)in_val;
-            rc = mm_channel_get_stream_parm(my_obj, payload);
-        }
-        break;
-    case MM_CHANNEL_EVT_DO_STREAM_ACTION:
-        {
-            mm_evt_paylod_do_stream_action_t *payload =
-                (mm_evt_paylod_do_stream_action_t *)in_val;
-            rc = mm_channel_do_stream_action(my_obj, payload);
-        }
-        break;
+    case MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL:
+	{
+		// Samsung this is ancient (2011 era)....
+		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL", __func__);
+	}
+	break;
     case MM_CHANNEL_EVT_AE_BRACKETTING:
 	{
 		CDBG_ERROR("%s: Unsupported function reached: MM_CHANNEL_EVT_AE_BRACKETTING", __func__);
@@ -1536,19 +1518,15 @@ int32_t mm_channel_handle_metadata(
             goto end;
         }
 
-        if (metadata->is_prep_snapshot_done_valid) {
-            if (metadata->prep_snapshot_done_state == NEED_FUTURE_FRAME) {
-                /* Set expected frame id to a future frame idx, large enough to wait
-                 * for good_frame_idx_range, and small enough to still capture an image */
-                const int max_future_frame_offset = 100;
-                queue->expected_frame_id += max_future_frame_offset;
+        if (metadata->is_prep_snapshot_done_valid &&
+            metadata->prep_snapshot_done_state == NEED_FUTURE_FRAME) {
 
-                mm_channel_superbuf_flush(ch_obj, queue);
+            /* Set expected frame id to a future frame idx, large enough to wait
+             * for good_frame_idx_range, and small enough to still capture an image */
+            const int max_future_frame_offset = 100;
+            queue->expected_frame_id += max_future_frame_offset;
 
-                ch_obj->needLEDFlash = TRUE;
-            } else {
-                ch_obj->needLEDFlash = FALSE;
-            }
+            mm_channel_superbuf_flush(ch_obj, queue);
         } else if (metadata->is_good_frame_idx_range_valid) {
             if (metadata->good_frame_idx_range.min_frame_idx >
                 queue->expected_frame_id) {

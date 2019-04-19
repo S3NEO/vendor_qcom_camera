@@ -169,7 +169,8 @@ QCameraStream::QCameraStream(QCameraAllocator &allocator,
         mStreamInfoBuf(NULL),
         mStreamBufs(NULL),
         mAllocator(allocator),
-        mBufDefs(NULL)
+        mBufDefs(NULL),
+        mStreamBufsAcquired(false)
 {
     mMemVtbl.user_data = this;
     mMemVtbl.get_bufs = get_bufs;
@@ -199,7 +200,7 @@ QCameraStream::~QCameraStream()
         int rc = mCamOps->unmap_stream_buf(mCamHandle,
                     mChannelHandle, mHandle, CAM_MAPPING_BUF_TYPE_STREAM_INFO, 0, -1);
         if (rc < 0) {
-            ALOGE("%s: Failed to map stream info buffer", __func__);
+            ALOGE("Failed to map stream info buffer");
         }
         mStreamInfoBuf->deallocate();
         delete mStreamInfoBuf;
@@ -251,7 +252,7 @@ int32_t QCameraStream::init(QCameraHeapMemory *streamInfoBuf,
                 mChannelHandle, mHandle, CAM_MAPPING_BUF_TYPE_STREAM_INFO,
                 0, -1, mStreamInfoBuf->getFd(0), mStreamInfoBuf->getSize(0));
     if (rc < 0) {
-        ALOGE("%s: Failed to map stream info buffer", __func__);
+        ALOGE("Failed to map stream info buffer");
         goto err1;
     }
 
@@ -666,8 +667,10 @@ int32_t QCameraStream::putBufs(mm_camera_map_unmap_ops_tbl_t *ops_tbl)
     mBufDefs = NULL; // mBufDefs just keep a ptr to the buffer
                      // mm-camera-interface own the buffer, so no need to free
     memset(&mFrameLenOffset, 0, sizeof(mFrameLenOffset));
-    mStreamBufs->deallocate();
-    delete mStreamBufs;
+    if ( !mStreamBufsAcquired ) {
+        mStreamBufs->deallocate();
+        delete mStreamBufs;
+    }
 
     return rc;
 }
@@ -719,6 +722,29 @@ int32_t QCameraStream::cleanInvalidateBuf(int index)
 bool QCameraStream::isTypeOf(cam_stream_type_t type)
 {
     if (mStreamInfo != NULL && (mStreamInfo->stream_type == type)) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/*===========================================================================
+ * FUNCTION   : isOrignalTypeOf
+ *
+ * DESCRIPTION: helper function to determine if the original stream is of the
+ *              queried type if it's reproc stream
+ *
+ * PARAMETERS :
+ *   @type    : stream type as of queried
+ *
+ * RETURN     : true/false
+ *==========================================================================*/
+bool QCameraStream::isOrignalTypeOf(cam_stream_type_t type)
+{
+    if (mStreamInfo != NULL &&
+        mStreamInfo->stream_type == CAM_STREAM_TYPE_OFFLINE_PROC &&
+        mStreamInfo->reprocess_config.pp_type == CAM_ONLINE_REPROCESS_TYPE &&
+        mStreamInfo->reprocess_config.online.input_stream_type == type) {
         return true;
     } else {
         return false;
@@ -838,6 +864,24 @@ uint32_t QCameraStream::getMyServerID() {
     } else {
         return 0;
     }
+}
+
+/*===========================================================================
+ * FUNCTION   : acquireStreamBufs
+ *
+ * DESCRIPTION: acquire stream buffers and postpone their release.
+ *
+ * PARAMETERS : None
+ *
+ * RETURN     : int32_t type of status
+ *              NO_ERROR  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int32_t QCameraStream::acquireStreamBufs()
+{
+    mStreamBufsAcquired = true;
+
+    return NO_ERROR;
 }
 
 /*===========================================================================

@@ -27,9 +27,8 @@
  *
  */
 
-#include <sys/ioctl.h>
-#include <linux/msm_ion.h>
 #include "mm_jpeg_ionbuf.h"
+#include <linux/msm_ion.h>
 
 /** buffer_allocate:
  *
