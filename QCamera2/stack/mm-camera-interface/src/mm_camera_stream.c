@@ -2355,8 +2355,10 @@ int32_t mm_stream_calc_offset_postproc(cam_stream_info_t *stream_info,
 {
     int32_t rc = 0;
     if (stream_info->reprocess_config.pp_type == CAM_OFFLINE_REPROCESS_TYPE) {
-        // take offset from input source
-        *buf_planes = stream_info->reprocess_config.offline.input_buf_planes;
+        if (buf_planes->plane_info.frame_len == 0) {
+            // take offset from input source
+            *buf_planes = stream_info->reprocess_config.offline.input_buf_planes;
+        }
         return rc;
     }
 
@@ -2503,7 +2505,6 @@ int32_t mm_stream_sync_info(mm_stream_t *my_obj)
     rc = mm_stream_calc_offset(my_obj);
 
     if (rc == 0) {
-	CDBG_ERROR("%s: E CAM_PRIV_STREAM_INFO_SYNC", __func__);
         rc = mm_camera_util_s_ctrl(my_obj->fd,
                                    CAM_PRIV_STREAM_INFO_SYNC,
                                    &value);
@@ -2530,7 +2531,7 @@ int32_t mm_stream_set_fmt(mm_stream_t *my_obj)
     struct msm_v4l2_format_data msm_fmt;
     int i;
 
-    CDBG_ERROR("%s: E, my_handle = 0x%x, fd = %d, state = %d",
+    CDBG("%s: E, my_handle = 0x%x, fd = %d, state = %d",
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
 
     if (my_obj->stream_info->dim.width == 0 ||
@@ -2577,19 +2578,19 @@ int32_t mm_stream_buf_done(mm_stream_t * my_obj,
                            mm_camera_buf_def_t *frame)
 {
     int32_t rc = 0;
-    CDBG_ERROR("%s: E, my_handle = 0x%x, fd = %d, state = %d",
+    CDBG("%s: E, my_handle = 0x%x, fd = %d, state = %d",
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
 
     pthread_mutex_lock(&my_obj->buf_lock);
     if(my_obj->buf_status[frame->buf_idx].buf_refcnt == 0) {
-        CDBG_ERROR("%s: Error Trying to free second time?(idx=%d) count=%d\n",
+        CDBG("%s: Error Trying to free second time?(idx=%d) count=%d\n",
                    __func__, frame->buf_idx,
                    my_obj->buf_status[frame->buf_idx].buf_refcnt);
         rc = -1;
     }else{
         my_obj->buf_status[frame->buf_idx].buf_refcnt--;
         if (0 == my_obj->buf_status[frame->buf_idx].buf_refcnt) {
-            CDBG_ERROR("<DEBUG> : Buf done for buffer:%d", frame->buf_idx);
+            CDBG("<DEBUG> : Buf done for buffer:%d", frame->buf_idx);
             rc = mm_stream_qbuf(my_obj, frame);
             if(rc < 0) {
                 CDBG_ERROR("%s: mm_camera_stream_qbuf(idx=%d) err=%d\n",
@@ -2598,9 +2599,9 @@ int32_t mm_stream_buf_done(mm_stream_t * my_obj,
                 my_obj->buf_status[frame->buf_idx].in_kernel = 1;
             }
         }else{
-            CDBG_ERROR("<DEBUG> : Still ref count pending count :%d",
+            CDBG("<DEBUG> : Still ref count pending count :%d",
                  my_obj->buf_status[frame->buf_idx].buf_refcnt);
-            CDBG_ERROR("<DEBUG> : for buffer:%p:%d",
+            CDBG("<DEBUG> : for buffer:%p:%d",
                  my_obj, frame->buf_idx);
         }
     }
@@ -2626,46 +2627,9 @@ int32_t mm_stream_reg_buf_cb(mm_stream_t *my_obj,
 {
     int32_t rc = -1;
     uint8_t i;
-    CDBG_ERROR("%s: E, my_handle = 0x%x, fd = %d, state = %d",
+    CDBG("%s: E, my_handle = 0x%x, fd = %d, state = %d",
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
 
-
-    printf("%d", sizeof(cam_padding_info_t));
-    printf("%d", sizeof(cam_frame_len_offset_t));
-    printf("%d", sizeof(mm_camera_cmd_thread_t));
-    printf("%d", sizeof(mm_stream_data_cb_t) * 4);
-    printf("%d", sizeof(mm_camera_cmdcb_type_t));
-    printf("%d", sizeof(mm_camera_buf_info_t));
-    printf("%d", sizeof(mm_camera_req_buf_t));
-    printf("%d", sizeof(mm_camera_super_buf_t));
-    printf("%d", sizeof(mm_camera_cmdcb_t));
-    printf("%d", sizeof(mm_camera_poll_thread_type_t));
-    printf("%d", sizeof(mm_camera_poll_entry_t));
-    printf("%d", sizeof(mm_camera_poll_thread_t));
-    printf("%d", sizeof(mm_camera_buf_notify_t));
-    printf("%d", sizeof(mm_stream_data_cb_t));
-    printf("%d", sizeof(mm_stream_buf_status_t));
-    printf("%d", sizeof(mm_stream_t));
-    printf("%d", sizeof(mm_evt_paylod_config_stream_t));
-    printf("%d", sizeof(mm_evt_paylod_set_get_stream_parms_t));
-    printf("%d", sizeof(mm_evt_paylod_do_stream_action_t));
-    printf("%d", sizeof(mm_evt_paylod_map_stream_buf_t));
-    printf("%d", sizeof(mm_evt_paylod_unmap_stream_buf_t));
-    printf("%d", sizeof(mm_channel_queue_node_t));
-    printf("%d", sizeof(mm_channel_queue_t));
-    printf("%d", sizeof(mm_channel_bundle_t));
-    printf("%d", sizeof(mm_channel_t));
-    printf("%d", sizeof(mm_channel_pp_info_t));
-    printf("%d", sizeof(mm_camera_evt_entry_t));
-    printf("%d", sizeof(mm_camera_evt_obj_t));
-    printf("%d", sizeof(mm_camera_obj_t));
-    printf("%d", sizeof(mm_camera_buf_def_t));
-    printf("%d", sizeof(mm_camera_event_t));
-    printf("%d", sizeof(mm_camera_map_unmap_ops_tbl_t));
-    printf("%d", sizeof(mm_camera_stream_mem_vtbl_t));
-    printf("%d", sizeof(mm_camera_stream_config_t));
-    printf("%d", sizeof(mm_camera_channel_attr_t));
-    printf("%d", sizeof(mm_camera_vtbl_t));
     pthread_mutex_lock(&my_obj->cb_lock);
     for (i=0 ;i < MM_CAMERA_STREAM_BUF_CB_MAX; i++) {
         if(NULL == my_obj->buf_cb[i].cb) {
