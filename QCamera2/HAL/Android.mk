@@ -22,9 +22,10 @@ LOCAL_SRC_FILES := \
 	QCameraPostProc.cpp \
         QCamera2HWICallbacks.cpp \
         QCameraParameters.cpp \
-        QCameraThermalAdapter.cpp
+        QCameraThermalAdapter.cpp \
+        wrapper/QualcommCamera.cpp
 
-LOCAL_CFLAGS = -Wall -Werror -Wextra -DDEFAULT_ZSL_MODE_ON -DDEFAULT_DENOISE_MODE_ON
+LOCAL_CFLAGS = -Wall -Werror
 #Debug logs are enabled
 #LOCAL_CFLAGS += -DDISABLE_DEBUG_LOG
 
@@ -32,8 +33,8 @@ LOCAL_C_INCLUDES := \
         $(LOCAL_PATH)/../stack/common \
         frameworks/native/include/media/hardware \
         frameworks/native/include/media/openmax \
-        hardware/qcom/media/libstagefrighthw \
-	hardware/qcom/display/libgralloc \
+        hardware/qcom/display/libgralloc \
+        hardware/qcom/media/msm8974/libstagefrighthw \
         $(LOCAL_PATH)/../../mm-image-codec/qexif \
         $(LOCAL_PATH)/../../mm-image-codec/qomx_core \
 	$(LOCAL_PATH)/../util

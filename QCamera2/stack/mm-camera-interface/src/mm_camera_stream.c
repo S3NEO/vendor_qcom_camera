@@ -986,6 +986,21 @@ int32_t mm_stream_read_msm_frame(mm_stream_t * my_obj,
         buf_info->buf->frame_idx = vb.sequence;
         buf_info->buf->ts.tv_sec  = vb.timestamp.tv_sec;
         buf_info->buf->ts.tv_nsec = vb.timestamp.tv_usec * 1000;
+ #if 0
+        /* If YUV format, check chroma size to see if extra subsampling
+                is applied */
+        if (my_obj->stream_info->fmt >= CAM_FORMAT_YUV_420_NV12 &&
+            my_obj->stream_info->fmt <= CAM_FORMAT_YUV_422_NV61 &&
+            my_obj->stream_info->buf_planes.plane_info.mp[1].len / 4 ==
+            planes[1].bytesused)
+          buf_info->buf->is_uv_subsampled = 1;
+        else
+          buf_info->buf->is_uv_subsampled = 0;
+#else
+        buf_info->buf->is_uv_subsampled =
+          (vb.reserved == V4L2_PIX_FMT_NV14 || vb.reserved == V4L2_PIX_FMT_NV41);
+#endif
+
         CDBG_HIGH("%s: VIDIOC_DQBUF buf_index %d, frame_idx %d, stream type %d\n",
              __func__, vb.index, buf_info->buf->frame_idx, my_obj->stream_info->stream_type);
         if ( NULL != my_obj->mem_vtbl.clean_invalidate_buf ) {
@@ -1196,6 +1211,9 @@ int32_t mm_stream_request_buf(mm_stream_t * my_obj)
     CDBG("%s: E, my_handle = 0x%x, fd = %d, state = %d",
          __func__, my_obj->my_hdl, my_obj->fd, my_obj->state);
 
+    CDBG_ERROR("%s: buf_num = %d, stream type = %d",
+         __func__, buf_num, my_obj->stream_info->stream_type);
+
     if(buf_num > MM_CAMERA_MAX_NUM_FRAMES) {
         CDBG_ERROR("%s: buf num %d > max limit %d\n",
                    __func__, buf_num, MM_CAMERA_MAX_NUM_FRAMES);
@@ -1225,6 +1243,7 @@ int32_t mm_stream_request_buf(mm_stream_t * my_obj)
       CDBG_ERROR("%s: fd=%d, ioctl VIDIOC_REQBUFS failed: rc=%d\n",
            __func__, my_obj->fd, rc);
     }
+
     CDBG("%s :X rc = %d",__func__,rc);
     return rc;
 }
@@ -1454,6 +1473,9 @@ int32_t mm_stream_init_bufs(mm_stream_t * my_obj)
 
     free(reg_flags);
     reg_flags = NULL;
+
+    /* update in stream info about number of stream buffers */
+    my_obj->stream_info->num_bufs = my_obj->buf_num;
 
     return rc;
 }
@@ -1812,6 +1834,39 @@ int32_t mm_stream_calc_offset_preview(cam_format_t fmt,
             PAD_TO_SIZE(buf_planes->plane_info.mp[0].len +
                         buf_planes->plane_info.mp[1].len,
                         CAM_PAD_TO_4K);
+        break;
+    case CAM_FORMAT_YUV_420_NV12_VENUS:
+#ifdef VENUS_PRESENT
+        // using Venus
+        stride = VENUS_Y_STRIDE(COLOR_FMT_NV12, dim->width);
+        scanline = VENUS_Y_SCANLINES(COLOR_FMT_NV12, dim->height);
+
+        buf_planes->plane_info.frame_len =
+            VENUS_BUFFER_SIZE(COLOR_FMT_NV12, dim->width, dim->height);
+        buf_planes->plane_info.num_planes = 2;
+        buf_planes->plane_info.mp[0].len = stride * scanline;
+        buf_planes->plane_info.mp[0].offset = 0;
+        buf_planes->plane_info.mp[0].offset_x =0;
+        buf_planes->plane_info.mp[0].offset_y = 0;
+        buf_planes->plane_info.mp[0].stride = stride;
+        buf_planes->plane_info.mp[0].scanline = scanline;
+        buf_planes->plane_info.mp[0].width = dim->width;
+        buf_planes->plane_info.mp[0].height = dim->height;
+        stride = VENUS_UV_STRIDE(COLOR_FMT_NV12, dim->width);
+        scanline = VENUS_UV_SCANLINES(COLOR_FMT_NV12, dim->height);
+        buf_planes->plane_info.mp[1].len =
+            buf_planes->plane_info.frame_len - buf_planes->plane_info.mp[0].len;
+        buf_planes->plane_info.mp[1].offset = 0;
+        buf_planes->plane_info.mp[1].offset_x =0;
+        buf_planes->plane_info.mp[1].offset_y = 0;
+        buf_planes->plane_info.mp[1].stride = stride;
+        buf_planes->plane_info.mp[1].scanline = scanline;
+        buf_planes->plane_info.mp[1].width = dim->width;
+        buf_planes->plane_info.mp[1].height = dim->height;
+#else
+        CDBG_ERROR("%s: Venus hardware not avail, cannot use this format", __func__);
+        rc = -1;
+#endif
         break;
     default:
         CDBG_ERROR("%s: Invalid cam_format for preview %d",

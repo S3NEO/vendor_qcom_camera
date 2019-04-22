@@ -402,6 +402,7 @@ typedef struct {
     int8_t num_cam;
     char video_dev_name[MM_CAMERA_MAX_NUM_SENSORS][MM_CAMERA_DEV_NAME_LEN];
     mm_camera_obj_t *cam_obj[MM_CAMERA_MAX_NUM_SENSORS];
+    struct camera_info info[MM_CAMERA_MAX_NUM_SENSORS];
 } mm_camera_ctrl_t;
 
 /**********************************************************************************
