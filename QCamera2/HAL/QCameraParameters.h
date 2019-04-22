@@ -44,6 +44,20 @@ static const char ExifUndefinedPrefix[] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 #define GPS_PROCESSING_METHOD_SIZE       101
 #define EXIF_ASCII_PREFIX_SIZE           8   //(sizeof(ExifAsciiPrefix))
 #define FOCAL_LENGTH_DECIMAL_PRECISION   100
+class QCameraTorchInterface
+{
+public:
+    virtual int prepareTorchCamera() = 0;
+    virtual int releaseTorchCamera() = 0;
+    virtual ~QCameraTorchInterface() {}
+};
+
+class QCameraAdjustFPS
+{
+public:
+    virtual int recalcFPSRange(int &minFPS, int &maxFPS) = 0;
+    virtual ~QCameraAdjustFPS() {}
+};
 
 class QCameraParameters: public CameraParameters
 {
@@ -361,7 +375,10 @@ public:
     void setTouchIndexAf(int x, int y);
     void getTouchIndexAf(int *x, int *y);
 
-    int32_t init(cam_capability_t *, mm_camera_vtbl_t *);
+    int32_t init(cam_capability_t *,
+                 mm_camera_vtbl_t *,
+                 QCameraAdjustFPS *,
+                 QCameraTorchInterface *);
     void deinit();
     int32_t assign(QCameraParameters& params);
     int32_t initDefaultParameters();
@@ -601,6 +618,8 @@ private:
     bool m_bAFRunning;
     qcamera_thermal_mode m_ThermalMode; // adjust fps vs adjust frameskip
     cam_dimension_t m_LiveSnapshotSize; // live snapshot size
+    QCameraTorchInterface *m_pTorch; // Interface for enabling torch
+    bool m_bReleaseTorchCamera; // Release camera resources after torch gets disabled
 
     DefaultKeyedVector<String8,String8> m_tempMap; // map for temororily store parameters to be set
 };

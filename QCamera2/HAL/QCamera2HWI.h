@@ -161,7 +161,9 @@ private:
     QCameraCmdThread mProcTh;
 };
 class QCamera2HardwareInterface : public QCameraAllocator,
-                                    public QCameraThermalCallback
+                                  public QCameraThermalCallback,
+				  public QCameraAdjustFPS,
+                                  public QCameraTorchInterface
 {
 public:
     /* static variable and functions accessed by camera service */
@@ -223,6 +225,10 @@ public:
     // Implementation of QCameraThermalCallback
     virtual int thermalEvtHandle(qcamera_thermal_level_enum_t level,
             void *userdata, void *data);
+
+    // Implementation of QCameraTorchInterface
+    virtual int prepareTorchCamera();
+    virtual int releaseTorchCamera();
 
     friend class QCameraStateMachine;
     friend class QCameraPostProcessor;
