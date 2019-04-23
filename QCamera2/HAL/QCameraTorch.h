@@ -27,28 +27,36 @@
  *
  */
 
-#include "QCamera2Factory.h"
+#ifndef __QCAMERA_TORCH_H__
+#define __QCAMERA_TORCH_H__
 
-static hw_module_t camera_common = {
-    tag: HARDWARE_MODULE_TAG,
-    module_api_version: CAMERA_MODULE_API_VERSION_1_0,
-    hal_api_version: HARDWARE_HAL_API_VERSION,
-    id: CAMERA_HARDWARE_MODULE_ID,
-    name: "QCamera Module",
-    author: "Qualcomm Innovation Center Inc",
-    methods: &qcamera::QCamera2Factory::mModuleMethods,
-    dso: NULL,
-    reserved:  {0},
+#include <hardware/camera.h>
+#include "QCameraCmdThread.h"
+#include "QCameraMem.h"
+#include "QCameraAllocator.h"
+
+extern "C" {
+#include <mm_camera_interface.h>
+}
+
+namespace qcamera {
+
+class QCameraTorch;
+
+class QCameraTorch
+{
+public:
+
+    int32_t get_mode(void);
+    int32_t set_mode(const char* id, int value);
+
+private:
+    uint32_t mTorchHandle;
+
+    int32_t getMode(void);
+    int32_t setMode(int value);
 };
 
-camera_module_t HAL_MODULE_INFO_SYM = {
-    common: camera_common,
-    get_number_of_cameras: qcamera::QCamera2Factory::get_number_of_cameras,
-    get_camera_info: qcamera::QCamera2Factory::get_camera_info,
-    set_callbacks: NULL,
-    get_vendor_tag_ops: NULL,
-#if 0
-    set_torch_mode: qcamera::QCamera2Factory::set_torch_mode,
-#endif
-    reserved: {0}
-};
+}; // namespace qcamera
+
+#endif /* __QCAMERA_TORCH_H__ */

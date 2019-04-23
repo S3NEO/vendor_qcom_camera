@@ -67,6 +67,25 @@ QCamera2Factory::~QCamera2Factory()
 {
 }
 
+#if 0
+/*===========================================================================
+ * FUNCTION   : set_torch_mode
+ *
+ * DESCRIPTION: Attempt to turn on or off the torch mode of the flash unit.
+ *
+ * PARAMETERS :
+ *   @camera_id : camera ID
+ *   @on        : Indicates whether to turn the flash on or off
+ *
+ * RETURN     : 0  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int QCamera2Factory::set_torch_mode(const char* camera_id, bool on)
+{
+    return gQCamera2Factory.setTorchMode(camera_id, on);
+}
+#endif
+
 /*===========================================================================
  * FUNCTION   : get_number_of_cameras
  *
@@ -213,5 +232,31 @@ int QCamera2Factory::camera_device_open(
 struct hw_module_methods_t QCamera2Factory::mModuleMethods = {
     open: QCamera2Factory::camera_device_open,
 };
+
+#if 0
+/*===========================================================================
+ * FUNCTION   : setTorchMode
+ *
+ * DESCRIPTION: Attempt to turn on or off the torch mode of the flash unit.
+ *
+ * PARAMETERS :
+ *   @camera_id : camera ID
+ *   @on        : Indicates whether to turn the flash on or off
+ *
+ * RETURN     : 0  -- success
+ *              none-zero failure code
+ *==========================================================================*/
+int QCamera2Factory::setTorchMode(const char* camera_id, bool on)
+{
+	QCameraTorch *torch = new QCameraTorch;
+	ALOGE("Setting Torch to %d", on);
+	if (torch->get_mode() == 0){
+		return torch->set_mode(camera_id, on);
+	} else {
+		// torch already in use...
+		return -1;
+	}
+}
+#endif
 
 }; // namespace qcamera

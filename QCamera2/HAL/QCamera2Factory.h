@@ -35,6 +35,7 @@
 #include <media/msmb_camera.h>
 
 #include "QCamera2HWI.h"
+#include "QCameraTorch.h"
 
 namespace qcamera {
 
@@ -46,6 +47,9 @@ public:
 
     static int get_number_of_cameras();
     static int get_camera_info(int camera_id, struct camera_info *info);
+#if 0
+    static int set_torch_mode(const char* camera_id __unused, bool on);
+#endif
 
 private:
     int getNumberOfCameras();
@@ -53,6 +57,9 @@ private:
     int cameraDeviceOpen(int camera_id, struct hw_device_t **hw_device);
     static int camera_device_open(const struct hw_module_t *module, const char *id,
                 struct hw_device_t **hw_device);
+#if 0
+    int setTorchMode(const char* camera_id __unused, bool on);
+#endif
 
 public:
     static struct hw_module_methods_t mModuleMethods;
