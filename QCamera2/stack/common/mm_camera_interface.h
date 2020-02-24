@@ -201,6 +201,11 @@ typedef struct {
     cam_padding_info_t padding_info;
     mm_camera_stream_mem_vtbl_t mem_vtbl;
     mm_camera_buf_notify_t stream_cb;
+
+    // This appears to be a mem_vtbl but why??? we already got on here anyways maybe our structure here is wrong #TODO
+    mm_camera_stream_mem_vtbl_t my_vtbl;
+
+    int cb;
     void *userdata;
 } mm_camera_stream_config_t;
 
@@ -373,6 +378,18 @@ typedef struct {
      **/
     int32_t (*prepare_snapshot) (uint32_t camera_handle,
                                  int32_t do_af_flag);
+
+    /** unprepare_snapshot: fucntion definition for unpreparing hardware
+     *                    after snapshot.
+     *    @camera_handle : camer handler
+     *    @do_af_flag    : flag indicating if AF needs to be done
+     *                     0 -- no AF needed
+     *                     1 -- AF needed
+     *  Return value: 0 -- success
+     *                -1 -- failure
+     **/
+    int32_t (*unprepare_snapshot) (uint32_t camera_handle,
+				 int32_t do_af_flag);
 
     /** add_channel: fucntion definition for adding a channel
      *    @camera_handle : camer handler
@@ -622,5 +639,5 @@ uint8_t get_num_of_cameras();
 
 /* return reference pointer of camera vtbl */
 mm_camera_vtbl_t * camera_open(uint8_t camera_idx);
-struct camera_info *get_cam_info(int camera_id);
+
 #endif /*__MM_CAMERA_INTERFACE_H__*/

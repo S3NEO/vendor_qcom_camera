@@ -69,8 +69,8 @@ typedef struct {
   char *out_filename;
   pthread_mutex_t lock;
   pthread_cond_t cond;
-  buffer_t input;
-  buffer_t output;
+  buffer_test_t input;
+  buffer_test_t output;
   int use_ion;
   uint32_t handle;
   mm_jpeg_ops_t ops;
@@ -103,12 +103,12 @@ static void mm_jpeg_encode_callback(jpeg_job_status_t status,
   }
 }
 
-int mm_jpeg_test_alloc(buffer_t *p_buffer, int use_pmem)
+int mm_jpeg_test_alloc(buffer_test_t *p_buffer, int use_pmem)
 {
   int ret = 0;
   /*Allocate buffers*/
   if (use_pmem) {
-    p_buffer->addr = (uint8_t *)buffer_allocate(p_buffer, 0);
+    p_buffer->addr = (uint8_t *)buffer_allocate(p_buffer);
     if (NULL == p_buffer->addr) {
       CDBG_ERROR("%s:%d] Error",__func__, __LINE__);
       return -1;
@@ -124,7 +124,7 @@ int mm_jpeg_test_alloc(buffer_t *p_buffer, int use_pmem)
   return ret;
 }
 
-void mm_jpeg_test_free(buffer_t *p_buffer)
+void mm_jpeg_test_free(buffer_test_t *p_buffer)
 {
   if (p_buffer->addr == NULL)
     return;
@@ -134,7 +134,7 @@ void mm_jpeg_test_free(buffer_t *p_buffer)
   else
     free(p_buffer->addr);
 
-  memset(p_buffer, 0x0, sizeof(buffer_t));
+  memset(p_buffer, 0x0, sizeof(buffer_test_t));
 }
 
 int mm_jpeg_test_read(mm_jpeg_intf_test_t *p_obj)
@@ -204,7 +204,6 @@ static int encode_init(jpeg_test_input_t *p_input, mm_jpeg_intf_test_t *p_obj)
   p_params->jpeg_cb = mm_jpeg_encode_callback;
   p_params->userdata = p_obj;
   p_params->color_format = MM_JPEG_COLOR_FORMAT_YCRCBLP_H2V2;
-  p_params->thumb_color_format = MM_JPEG_COLOR_FORMAT_YCRCBLP_H2V2;
 
   /* dest buffer config */
   p_params->dest_buf[0].buf_size = p_obj->output.size;
@@ -224,6 +223,7 @@ static int encode_init(jpeg_test_input_t *p_input, mm_jpeg_intf_test_t *p_obj)
   p_params->num_src_bufs = 1;
 
   p_params->encode_thumbnail = 1;
+  p_params->exif_info.numOfEntries = 0;
   p_params->quality = 80;
 
   p_job_params->dst_index = 0;
@@ -249,8 +249,6 @@ static int encode_init(jpeg_test_input_t *p_input, mm_jpeg_intf_test_t *p_obj)
   p_job_params->thumb_dim.crop.left = 0;
   p_job_params->thumb_dim.crop.width = p_obj->width;
   p_job_params->thumb_dim.crop.height = p_obj->height;
-
-  p_job_params->exif_info.numOfEntries = 0;
   return 0;
 }
 
@@ -267,12 +265,7 @@ static int encode_test(jpeg_test_input_t *p_input)
     return -1;
   }
 
-  mm_dimension pic_size;
-  memset(&pic_size, 0, sizeof(mm_dimension));
-  pic_size.w = 4000;
-  pic_size.h = 3000;
-
-  jpeg_obj.handle = jpeg_open(&jpeg_obj.ops, pic_size);
+  jpeg_obj.handle = jpeg_open(&jpeg_obj.ops);
   if (jpeg_obj.handle == 0) {
     CDBG_ERROR("%s:%d] Error",__func__, __LINE__);
     goto end;

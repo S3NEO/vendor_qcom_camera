@@ -441,20 +441,7 @@ status_t  CameraContext::openCamera()
     }
 
     printf("openCamera(camera_index=%d)\n", mCameraIndex);
-
-#ifndef USE_JB_MR1
-
-    String16 packageName("CameraTest");
-
-    mCamera = Camera::connect(mCameraIndex,
-                              packageName,
-                              Camera::USE_CALLING_UID);
-
-#else
-
     mCamera = Camera::connect(mCameraIndex);
-
-#endif
 
     if ( NULL == mCamera.get() ) {
         printf("Unable to connect to CameraService\n");
@@ -514,7 +501,6 @@ status_t CameraContext::closeCamera()
     mCamera.clear();
     mHardwareActive = false;
     mPreviewRunning = false;
-    mRecordRunning = false;
 
     return NO_ERROR;
 }
@@ -537,12 +523,6 @@ status_t CameraContext::startPreview()
     Size currentPreviewSize = mSupportedPreviewSizes.itemAt(mCurrentPreviewSizeIdx);
     Size currentPictureSize = mSupportedPictureSizes.itemAt(mCurrentPictureSizeIdx);
 
-#ifndef USE_JB_MR1
-
-    sp<IGraphicBufferProducer> gbp;
-
-#endif
-
     if ( mPreviewRunning || !mHardwareActive ) {
         printf("Preview already running or camera not active! \n");
         return NO_INIT;
@@ -560,27 +540,11 @@ status_t CameraContext::startPreview()
             return ret;
         }
 
-        mParams.set("recording-hint", "true");
         mParams.setPreviewSize(previewWidth, previewHeight);
         mParams.setPictureSize(currentPictureSize.width, currentPictureSize.height);
 
         ret |= mCamera->setParameters(mParams.flatten());
-
-#ifndef USE_JB_MR1
-
-        gbp = mPreviewSurface->getIGraphicBufferProducer();
-#ifdef USE_VENDOR_CAMERA_EXT
-        ret |= mCamera->setPreviewTarget(gbp);
-#else
-        ret |= mCamera->setPreviewTexture(gbp);
-#endif
-
-#else
-
         ret |= mCamera->setPreviewDisplay(mPreviewSurface);
-
-#endif
-
         ret |= mCamera->startPreview();
         if ( NO_ERROR != ret ) {
             printf("Preview start failed! \n");
@@ -653,52 +617,6 @@ status_t CameraContext::takePicture()
 
     if ( mPreviewRunning ) {
         ret = mCamera->takePicture(CAMERA_MSG_COMPRESSED_IMAGE|CAMERA_MSG_RAW_IMAGE);
-    }
-
-    return ret;
-}
-
-/*===========================================================================
- * FUNCTION   : startRecording
- *
- * DESCRIPTION: triggers start recording
- *
- * PARAMETERS : None
- *
- * RETURN     : status_t type of status
- *              NO_ERROR  -- success
- *              none-zero failure code
- *==========================================================================*/
-status_t CameraContext::startRecording()
-{
-    status_t ret = NO_ERROR;
-
-    if ( mPreviewRunning ) {
-        ret = mCamera->startRecording();
-        mRecordRunning = true;
-    }
-
-    return ret;
-}
-
-/*===========================================================================
- * FUNCTION   : stopRecording
- *
- * DESCRIPTION: triggers start recording
- *
- * PARAMETERS : None
- *
- * RETURN     : status_t type of status
- *              NO_ERROR  -- success
- *              none-zero failure code
- *==========================================================================*/
-status_t CameraContext::stopRecording()
-{
-    status_t ret = NO_ERROR;
-
-    if ( mRecordRunning ) {
-        mCamera->stopRecording();
-        mRecordRunning = false;
     }
 
     return ret;
@@ -900,10 +818,6 @@ void printMenu(sp<CameraContext> currentCamera)
            CHANGE_PREVIEW_SIZE_CMD,
            currentPreviewSize.width,
            currentPreviewSize.height);
-    printf("   %c. Start Recording\n",
-            START_RECORD_CMD);
-    printf("   %c. Stop Recording\n",
-            STOP_RECORD_CMD);
     printf("   %c. Enable preview frames\n",
             ENABLE_PRV_CALLBACKS_CMD);
     printf("   %c. Trigger autofocus \n",
@@ -1007,18 +921,6 @@ status_t functionalTest(Vector< sp<CameraContext> > &availableCameras)
     case ENABLE_PRV_CALLBACKS_CMD:
         {
             stat = currentCamera->enablePreviewCallbacks();
-        }
-        break;
-
-    case START_RECORD_CMD:
-        {
-            stat = currentCamera->startRecording();
-        }
-        break;
-
-    case STOP_RECORD_CMD:
-        {
-            stat = currentCamera->stopRecording();
         }
         break;
 

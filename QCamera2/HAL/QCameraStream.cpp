@@ -161,9 +161,6 @@ QCameraStream::QCameraStream(QCameraAllocator &allocator,
                              uint32_t chId,
                              mm_camera_ops_t *camOps,
                              cam_padding_info_t *paddingInfo) :
-        mDumpFrame(0),
-        mDumpMetaFrame(0),
-        mDumpSkipCnt(0),
         mCamHandle(camHandle),
         mChannelHandle(chId),
         mHandle(0),
@@ -172,14 +169,11 @@ QCameraStream::QCameraStream(QCameraAllocator &allocator,
         mNumBufs(0),
         mNumBufsNeedAlloc(0),
         mDataCB(NULL),
-        mUserData(NULL),
-        mDataQ(releaseFrameData, this),
         mStreamInfoBuf(NULL),
         mStreamBufs(NULL),
         mAllocator(allocator),
         mBufDefs(NULL),
         mStreamBufsAcquired(false),
-        m_bActive(false),
         mDynBufAlloc(false),
         mBufAllocPid(0)
 {
@@ -193,7 +187,6 @@ QCameraStream::QCameraStream(QCameraAllocator &allocator,
     memset(&mCropInfo, 0, sizeof(cam_rect_t));
     memset(&m_MemOpsTbl, 0, sizeof(mm_camera_map_unmap_ops_tbl_t));
     pthread_mutex_init(&mCropLock, NULL);
-    pthread_mutex_init(&mParameterLock, NULL);
 }
 
 /*===========================================================================
@@ -208,7 +201,6 @@ QCameraStream::QCameraStream(QCameraAllocator &allocator,
 QCameraStream::~QCameraStream()
 {
     pthread_mutex_destroy(&mCropLock);
-    pthread_mutex_destroy(&mParameterLock);
 
     if (mStreamInfoBuf != NULL) {
         int rc = mCamOps->unmap_stream_buf(mCamHandle,
@@ -275,6 +267,7 @@ int32_t QCameraStream::init(QCameraHeapMemory *streamInfoBuf,
     // Configure the stream
     stream_config.stream_info = mStreamInfo;
     stream_config.mem_vtbl = mMemVtbl;
+    stream_config.my_vtbl = mMemVtbl;
     stream_config.stream_cb = dataNotifyCB;
     stream_config.padding_info = mPaddingInfo;
     stream_config.userdata = this;
@@ -319,9 +312,6 @@ int32_t QCameraStream::start()
 {
     int32_t rc = 0;
     rc = mProcTh.launch(dataProcRoutine, this);
-    if (rc == NO_ERROR) {
-        m_bActive = true;
-    }
     return rc;
 }
 
@@ -339,7 +329,6 @@ int32_t QCameraStream::start()
 int32_t QCameraStream::stop()
 {
     int32_t rc = 0;
-    m_bActive = false;
     rc = mProcTh.exit();
     return rc;
 }
@@ -399,16 +388,9 @@ int32_t QCameraStream::processZoomDone(preview_stream_ops_t *previewWindow,
  *==========================================================================*/
 int32_t QCameraStream::processDataNotify(mm_camera_super_buf_t *frame)
 {
-    ALOGV("%s:\n", __func__);
-    if (m_bActive) {
-        mDataQ.enqueue((void *)frame);
-        return mProcTh.sendCmd(CAMERA_CMD_TYPE_DO_NEXT_JOB, FALSE, FALSE);
-    } else {
-        ALOGV("%s: Stream thread is not active, no ops here", __func__);
-        bufDone(frame->bufs[0]->buf_idx);
-        free(frame);
-        return NO_ERROR;
-    }
+    ALOGI("%s:\n", __func__);
+    mDataQ.enqueue((void *)frame);
+    return mProcTh.sendCmd(CAMERA_CMD_TYPE_DO_NEXT_JOB, FALSE, FALSE);
 }
 
 /*===========================================================================
@@ -426,7 +408,7 @@ int32_t QCameraStream::processDataNotify(mm_camera_super_buf_t *frame)
 void QCameraStream::dataNotifyCB(mm_camera_super_buf_t *recvd_frame,
                                  void *userdata)
 {
-    ALOGV("%s:\n", __func__);
+    ALOGI("%s:\n", __func__);
     QCameraStream* stream = (QCameraStream *)userdata;
     if (stream == NULL ||
         recvd_frame == NULL ||
@@ -465,7 +447,7 @@ void *QCameraStream::dataProcRoutine(void *data)
     QCameraStream *pme = (QCameraStream *)data;
     QCameraCmdThread *cmdThread = &pme->mProcTh;
 
-    ALOGV("%s: E", __func__);
+    ALOGI("%s: E", __func__);
     do {
         do {
             ret = cam_sem_wait(&cmdThread->cmd_sem);
@@ -481,7 +463,7 @@ void *QCameraStream::dataProcRoutine(void *data)
         switch (cmd) {
         case CAMERA_CMD_TYPE_DO_NEXT_JOB:
             {
-                ALOGV("%s: Do next job", __func__);
+                ALOGD("%s: Do next job", __func__);
                 mm_camera_super_buf_t *frame =
                     (mm_camera_super_buf_t *)pme->mDataQ.dequeue();
                 if (NULL != frame) {
@@ -496,7 +478,7 @@ void *QCameraStream::dataProcRoutine(void *data)
             }
             break;
         case CAMERA_CMD_TYPE_EXIT:
-            ALOGV("%s: Exit", __func__);
+            ALOGD("%s: Exit", __func__);
             /* flush data buf queue */
             pme->mDataQ.flush();
             running = 0;
@@ -505,7 +487,7 @@ void *QCameraStream::dataProcRoutine(void *data)
             break;
         }
     } while (running);
-    ALOGV("%s: X", __func__);
+    ALOGD("%s: X", __func__);
     return NULL;
 }
 
@@ -610,8 +592,6 @@ int32_t QCameraStream::getBufs(cam_frame_len_offset_t *offset,
     //Allocate and map stream info buffer
     mStreamBufs = mAllocator.allocateStreamBuf(mStreamInfo->stream_type,
                                                mFrameLenOffset.frame_len,
-                                               mFrameLenOffset.mp[0].stride,
-                                               mFrameLenOffset.mp[0].scanline,
                                                numBufAlloc);
     mNumBufs = numBufAlloc + mNumBufsNeedAlloc;
 
@@ -857,8 +837,10 @@ bool QCameraStream::isOrignalTypeOf(cam_stream_type_t type)
         mStreamInfo->stream_type == CAM_STREAM_TYPE_OFFLINE_PROC &&
         mStreamInfo->reprocess_config.pp_type == CAM_ONLINE_REPROCESS_TYPE &&
         mStreamInfo->reprocess_config.online.input_stream_type == type) {
+	ALOGE("stream_type %d, pp_type %d, input_stream_type %d", mStreamInfo->stream_type, mStreamInfo->reprocess_config.pp_type, mStreamInfo->reprocess_config.online.input_stream_type);
         return true;
     } else {
+	ALOGE("%s: streaminfo is NULL", __func__);
         return false;
     }
 }
@@ -915,26 +897,6 @@ int32_t QCameraStream::getCropInfo(cam_rect_t &crop)
 {
     pthread_mutex_lock(&mCropLock);
     crop = mCropInfo;
-    pthread_mutex_unlock(&mCropLock);
-    return NO_ERROR;
-}
-
-/*===========================================================================
- * FUNCTION   : setCropInfo
- *
- * DESCRIPTION: set crop info of the stream
- *
- * PARAMETERS :
- *   @crop    : struct to store new crop info
- *
- * RETURN     : int32_t type of status
- *              NO_ERROR  -- success
- *              none-zero failure code
- *==========================================================================*/
-int32_t QCameraStream::setCropInfo(cam_rect_t crop)
-{
-    pthread_mutex_lock(&mCropLock);
-    mCropInfo = crop;
     pthread_mutex_unlock(&mCropLock);
     return NO_ERROR;
 }
@@ -1082,7 +1044,6 @@ int32_t QCameraStream::unmapBuf(uint8_t buf_type, uint32_t buf_idx, int32_t plan
 int32_t QCameraStream::setParameter(cam_stream_parm_buffer_t &param)
 {
     int32_t rc = NO_ERROR;
-    pthread_mutex_lock(&mParameterLock);
     mStreamInfo->parm_buf = param;
     rc = mCamOps->set_stream_parms(mCamHandle,
                                    mChannelHandle,
@@ -1091,62 +1052,7 @@ int32_t QCameraStream::setParameter(cam_stream_parm_buffer_t &param)
     if (rc == NO_ERROR) {
         param = mStreamInfo->parm_buf;
     }
-    pthread_mutex_unlock(&mParameterLock);
     return rc;
-}
-
-/*===========================================================================
- * FUNCTION   : getParameter
- *
- * DESCRIPTION: get stream based parameters
- *
- * PARAMETERS :
- *   @param   : ptr to parameters to be red
- *
- * RETURN     : int32_t type of status
- *              NO_ERROR  -- success
- *              none-zero failure code
- *==========================================================================*/
-int32_t QCameraStream::getParameter(cam_stream_parm_buffer_t &param)
-{
-    int32_t rc = NO_ERROR;
-
-    if (!m_bActive) {
-        ALOGE("%s : Stream not stopped!", __func__);
-        return NO_INIT;
-    }
-
-    pthread_mutex_lock(&mParameterLock);
-    mStreamInfo->parm_buf = param;
-    rc = mCamOps->get_stream_parms(mCamHandle,
-                                   mChannelHandle,
-                                   mHandle,
-                                   &mStreamInfo->parm_buf);
-    if (rc == NO_ERROR) {
-        param = mStreamInfo->parm_buf;
-    }
-    pthread_mutex_unlock(&mParameterLock);
-    return rc;
-}
-
-/*===========================================================================
- * FUNCTION   : releaseFrameData
- *
- * DESCRIPTION: callback function to release frame data node
- *
- * PARAMETERS :
- *   @data      : ptr to post process input data
- *   @user_data : user data ptr (QCameraReprocessor)
- *
- * RETURN     : None
- *==========================================================================*/
-void QCameraStream::releaseFrameData(void *data, void *user_data)
-{
-    QCameraStream *pme = (QCameraStream *)user_data;
-    mm_camera_super_buf_t *frame = (mm_camera_super_buf_t *)data;
-    if (NULL != pme) {
-        pme->bufDone(frame->bufs[0]->buf_idx);
-    }
 }
 
 }; // namespace qcamera

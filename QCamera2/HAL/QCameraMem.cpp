@@ -118,7 +118,7 @@ int QCameraMemory::cacheOpsInternal(int index, unsigned int cmd, void *vaddr)
     custom_data.cmd = cmd;
     custom_data.arg = (unsigned long)&cache_inv_data;
 
-    ALOGV("%s: addr = %p, fd = %d, handle = %p length = %d, ION Fd = %d",
+    ALOGD("%s: addr = %p, fd = %d, handle = %p length = %d, ION Fd = %d",
          __func__, cache_inv_data.vaddr, cache_inv_data.fd,
          cache_inv_data.handle, cache_inv_data.length,
          mMemInfo[index].main_ion_fd);
@@ -950,22 +950,6 @@ int QCameraVideoMemory::allocateMore(int count, int size)
 void QCameraVideoMemory::deallocate()
 {
     for (int i = 0; i < mBufferCount; i ++) {
-        struct encoder_media_buffer_type * packet =
-            (struct encoder_media_buffer_type *)mMetadata[i]->data;
-        if (NULL != packet) {
-            native_handle_t * nh = const_cast<native_handle_t *>(packet->meta_handle);
-            if (NULL != nh) {
-               if (native_handle_delete(nh)) {
-                   ALOGE("Unable to delete native handle");
-               }
-            }
-            else {
-               ALOGE("native handle not available");
-            }
-        }
-        else {
-            ALOGE("packet not available");
-        }
         mMetadata[i]->release(mMetadata[i]);
         mMetadata[i] = NULL;
     }
@@ -1043,7 +1027,7 @@ QCameraGrallocMemory::QCameraGrallocMemory(camera_request_memory getMemory)
 {
     mMinUndequeuedBuffers = 0;
     mWindow = NULL;
-    mWidth = mHeight = mStride = mScanline = 0;
+    mWidth = mHeight = 0;
     mFormat = HAL_PIXEL_FORMAT_YCrCb_420_SP;
     mGetMemory = getMemory;
     for (int i = 0; i < MM_CAMERA_MAX_NUM_FRAMES; i ++) {
@@ -1075,20 +1059,16 @@ QCameraGrallocMemory::~QCameraGrallocMemory()
  *   @window  : gralloc ops table ptr
  *   @width   : width of preview frame
  *   @height  : height of preview frame
- *   @stride  : stride of preview frame
- *   @scanline: scanline of preview frame
  *   @foramt  : format of preview image
  *
  * RETURN     : none
  *==========================================================================*/
 void QCameraGrallocMemory::setWindowInfo(preview_stream_ops_t *window,
-        int width, int height, int stride, int scanline, int format)
+        int width, int height, int format)
 {
     mWindow = window;
     mWidth = width;
     mHeight = height;
-    mStride = stride;
-    mScanline = scanline;
     mFormat = format;
 }
 
@@ -1178,6 +1158,7 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
         ret = UNKNOWN_ERROR;
         goto end;
     }
+    count += mMinUndequeuedBuffers;
 
     err = mWindow->set_buffer_count(mWindow, count);
     if (err != 0) {
@@ -1187,7 +1168,7 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
          goto end;
     }
 
-    err = mWindow->set_buffers_geometry(mWindow, mStride, mScanline, mFormat);
+    err = mWindow->set_buffers_geometry(mWindow, mWidth, mHeight, mFormat);
     if (err != 0) {
          ALOGE("%s: set_buffers_geometry failed: %s (%d)",
                __func__, strerror(-err), -err);
@@ -1195,15 +1176,7 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
          goto end;
     }
 
-    err = mWindow->set_crop(mWindow, 0, 0, mWidth, mHeight);
-    if (err != 0) {
-         ALOGE("%s: set_crop failed: %s (%d)",
-               __func__, strerror(-err), -err);
-         ret = UNKNOWN_ERROR;
-         goto end;
-    }
-
-    gralloc_usage = GRALLOC_USAGE_HW_CAMERA_WRITE | GRALLOC_USAGE_PRIVATE_IOMMU_HEAP;
+    gralloc_usage = GRALLOC_USAGE_PRIVATE_IOMMU_HEAP;
     err = mWindow->set_usage(mWindow, gralloc_usage);
     if(err != 0) {
         /* set_usage error out */
@@ -1211,9 +1184,8 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
         ret = UNKNOWN_ERROR;
         goto end;
     }
-    ALOGD("%s: usage = %d, geometry: %p, %d, %d, %d, %d, %d",
-          __func__, gralloc_usage, mWindow, mWidth, mHeight, mStride,
-          mScanline, mFormat);
+    ALOGD("%s: usage = %d, geometry: %p, %d, %d, %d",
+          __func__, gralloc_usage, mWindow, mWidth, mHeight, mFormat);
 
     //Allocate cnt number of buffers from native window
     for (int cnt = 0; cnt < count; cnt++) {
@@ -1234,12 +1206,6 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
                   __func__, strerror(-err), -err);
             ret = UNKNOWN_ERROR;
             for(int i = 0; i < cnt; i++) {
-                struct ion_handle_data ion_handle;
-                memset(&ion_handle, 0, sizeof(ion_handle));
-                ion_handle.handle = mMemInfo[i].handle;
-                if (ioctl(mMemInfo[i].main_ion_fd, ION_IOC_FREE, &ion_handle) < 0) {
-                    ALOGE("ion free failed");
-                }
                 if(mLocalFlag[i] != BUFFER_NOT_OWNED) {
                     err = mWindow->cancel_buffer(mWindow, mBufferHandle[i]);
                     ALOGD("%s: cancel_buffer: hdl =%p", __func__, (*mBufferHandle[i]));
@@ -1306,7 +1272,7 @@ int QCameraGrallocMemory::allocate(int count, int /*size*/)
                     mPrivateHandle[cnt]->size,
                     1,
                     (void *)this);
-        ALOGV("%s: idx = %d, fd = %d, size = %d, offset = %d",
+        ALOGD("%s: idx = %d, fd = %d, size = %d, offset = %d",
               __func__, cnt, mPrivateHandle[cnt]->fd,
               mPrivateHandle[cnt]->size,
               mPrivateHandle[cnt]->offset);

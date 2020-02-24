@@ -156,7 +156,7 @@ static int32_t mm_jpeg_intf_create_session(uint32_t client_hdl,
     return rc;
   }
 
- rc = mm_jpeg_create_session(g_jpeg_obj, client_hdl, p_params, p_session_id);
+  rc = mm_jpeg_create_session(g_jpeg_obj, client_hdl, p_params, p_session_id);
   pthread_mutex_unlock(&g_intf_lock);
   return rc;
 }
@@ -285,7 +285,7 @@ static int32_t mm_jpeg_intf_close(uint32_t client_hdl)
  *       Open a jpeg client
  *
  **/
-uint32_t jpeg_open(mm_jpeg_ops_t *ops, mm_dimension picture_size)
+uint32_t jpeg_open(mm_jpeg_ops_t *ops)
 {
   int32_t rc = 0;
   uint32_t clnt_hdl = 0;
@@ -303,11 +303,6 @@ uint32_t jpeg_open(mm_jpeg_ops_t *ops, mm_dimension picture_size)
 
     /* initialize jpeg obj */
     memset(jpeg_obj, 0, sizeof(mm_jpeg_obj));
-
-    /* used for work buf calculation */
-    jpeg_obj->max_pic_w = picture_size.w;
-    jpeg_obj->max_pic_h = picture_size.h;
-
     rc = mm_jpeg_init(jpeg_obj);
     if(0 != rc) {
       CDBG_ERROR("%s:%d] mm_jpeg_init err = %d", __func__, __LINE__, rc);

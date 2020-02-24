@@ -38,16 +38,15 @@
 #define CAM_MAX_NUM_BUFS_PER_STREAM 24
 #define MAX_METADATA_PAYLOAD_SIZE 1024
 
-#define CEILING64(X) (((X) + 0x0003F) & 0xFFFFFFC0)
 #define CEILING32(X) (((X) + 0x0001F) & 0xFFFFFFE0)
 #define CEILING16(X) (((X) + 0x000F) & 0xFFF0)
 #define CEILING4(X)  (((X) + 0x0003) & 0xFFFC)
 #define CEILING2(X)  (((X) + 0x0001) & 0xFFFE)
 
-#define MAX_ZOOMS_CNT 79
-#define MAX_SIZES_CNT 24
+#define MAX_ZOOMS_CNT 64
+#define MAX_SIZES_CNT 30
 #define MAX_EXP_BRACKETING_LENGTH 32
-#define MAX_ROI 5
+#define MAX_ROI 10 // why sammy
 #define MAX_STREAM_NUM_IN_BUNDLE 4
 #define MAX_NUM_STREAMS          8
 #define CHROMATIX_SIZE 21292
@@ -82,12 +81,13 @@
 #define MAX_PP_DATA_SIZE 2000
 #define MAX_STATS_DATA_SIZE 4000
 
+typedef struct {
+	char test[12];
+} cam_internal_fd_ae;
 
-
-typedef enum {
-    CAM_HAL_V1 = 1,
-    CAM_HAL_V3 = 3
-} cam_hal_version_t;
+typedef struct {
+	char name[32];
+} cam_fw_cl_number_t;
 
 typedef enum {
     CAM_STATUS_SUCCESS,       /* Operation Succeded */
@@ -219,20 +219,13 @@ typedef enum {
 } cam_format_t;
 
 typedef enum {
-    /* applies to HAL 1 */
     CAM_STREAM_TYPE_DEFAULT,       /* default stream type */
     CAM_STREAM_TYPE_PREVIEW,       /* preview */
     CAM_STREAM_TYPE_POSTVIEW,      /* postview */
     CAM_STREAM_TYPE_SNAPSHOT,      /* snapshot */
     CAM_STREAM_TYPE_VIDEO,         /* video */
-
-    /* applies to HAL 3 */
-    CAM_STREAM_TYPE_IMPL_DEFINED, /* opaque format: could be display, video enc, ZSL YUV */
-    CAM_STREAM_TYPE_YUV,          /* app requested callback stream type */
-
-    /* applies to both HAL 1 and HAL 3 */
-    CAM_STREAM_TYPE_METADATA,      /* meta data */
     CAM_STREAM_TYPE_RAW,           /* raw dump from camif */
+    CAM_STREAM_TYPE_METADATA,      /* meta data */
     CAM_STREAM_TYPE_OFFLINE_PROC,  /* offline process */
     CAM_STREAM_TYPE_MAX,
 } cam_stream_type_t;
@@ -330,9 +323,10 @@ typedef struct {
 
 typedef struct {
     int num_planes;
+
     union {
         cam_sp_len_offset_t sp;
-        cam_mp_len_offset_t mp[VIDEO_MAX_PLANES];
+	cam_mp_len_offset_t mp[VIDEO_MAX_PLANES];
     };
     uint32_t frame_len;
 } cam_frame_len_offset_t;
@@ -378,7 +372,6 @@ typedef enum {
     CAM_WB_MODE_CLOUDY_DAYLIGHT,
     CAM_WB_MODE_TWILIGHT,
     CAM_WB_MODE_SHADE,
-    CAM_WB_MODE_OFF,
     CAM_WB_MODE_MAX
 } cam_wb_mode_type;
 
@@ -461,9 +454,6 @@ typedef enum {
     CAM_SCENE_MODE_THEATRE,
     CAM_SCENE_MODE_ACTION,
     CAM_SCENE_MODE_AR,
-    CAM_SCENE_MODE_FACE_PRIORITY,
-    CAM_SCENE_MODE_BARCODE,
-    CAM_SCENE_MODE_HDR,
     CAM_SCENE_MODE_MAX
 } cam_scene_mode_type;
 
@@ -528,13 +518,6 @@ typedef enum {
     CAM_STREAMING_MODE_BURST,      /* burst streaming */
     CAM_STREAMING_MODE_MAX
 } cam_streaming_mode_t;
-
-typedef enum {
-    IS_TYPE_DIS,
-    IS_TYPE_GA_DIS,
-    IS_TYPE_EIS_1_0,
-    IS_TYPE_EIS_2_0
-} cam_is_type_t;
 
 #define CAM_REPROCESS_MASK_TYPE_WNR (1<<0)
 
@@ -650,28 +633,13 @@ typedef struct {
     int8_t face_id;            /* unique id for face tracking within view unless view changes */
     int8_t score;              /* score of confidence (0, -100) */
     cam_rect_t face_boundary;  /* boundary of face detected */
-    cam_coordinate_type_t left_eye_center;  /* coordinate of center of left eye */
-    cam_coordinate_type_t right_eye_center; /* coordinate of center of right eye */
-    cam_coordinate_type_t mouth_center;     /* coordinate of center of mouth */
-    uint8_t smile_degree;      /* smile degree (0, -100) */
-    uint8_t smile_confidence;  /* smile confidence (0, 100) */
-    uint8_t face_recognised;   /* if face is recognised */
-    int8_t gaze_angle;         /* -90 -45 0 45 90 for head left to rigth tilt */
-    int8_t updown_dir;         /* up down direction (-90, 90) */
-    int8_t leftright_dir;      /* left right direction (-90, 90) */
-    int8_t roll_dir;           /* roll direction (-90, 90) */
-    int8_t left_right_gaze;    /* left right gaze degree (-50, 50) */
-    int8_t top_bottom_gaze;    /* up down gaze degree (-50, 50) */
-    uint8_t blink_detected;    /* if blink is detected */
-    uint8_t left_blink;        /* left eye blink degeree (0, -100) */
-    uint8_t right_blink;       /* right eye blink degree (0, - 100) */
 } cam_face_detection_info_t;
 
 typedef struct {
     uint32_t frame_id;                         /* frame index of which faces are detected */
     uint8_t num_faces_detected;                /* number of faces detected */
     cam_face_detection_info_t faces[MAX_ROI];  /* detailed information of faces detected */
-    qcamera_face_detect_type_t fd_type;        /* face detect for preview or snapshot frame*/
+    //qcamera_face_detect_type_t fd_type;        /* face detect for preview or snapshot frame*/
 } cam_face_detection_data_t;
 
 #define CAM_HISTOGRAM_STATS_SIZE 256
@@ -781,7 +749,7 @@ typedef struct {
 
 typedef struct {
     cam_flash_mode_t flash_mode;
-    float aperture_value;
+    float            aperture_value;
 } cam_sensor_params_t;
 
 typedef struct {
@@ -883,217 +851,81 @@ typedef  struct {
     cam_chromatix_lite_af_stats_t chromatix_lite_af_stats_data;
 } cam_metadata_info_t;
 
+//All empty fields are assumed to be uint32_t
+//Update the parm_buffer_t accordingly!!!!
+
+//This has a length of 68
 typedef enum {
-    CAM_INTF_PARM_HAL_VERSION,
-    /* common between HAL1 and HAL3 */
-    CAM_INTF_PARM_ANTIBANDING,
-    CAM_INTF_PARM_EXPOSURE_COMPENSATION,
-    CAM_INTF_PARM_AEC_LOCK,
-    CAM_INTF_PARM_FPS_RANGE,
-    CAM_INTF_PARM_AWB_LOCK,
-    CAM_INTF_PARM_WHITE_BALANCE,
-    CAM_INTF_PARM_EFFECT,
-    CAM_INTF_PARM_BESTSHOT_MODE,
-    CAM_INTF_PARM_DIS_ENABLE,
-    CAM_INTF_PARM_LED_MODE,
-    CAM_INTF_META_HISTOGRAM, /* 10 */
-    CAM_INTF_META_FACE_DETECTION,
-    CAM_INTF_META_AUTOFOCUS_DATA,
-
-    /* specific to HAl1 */
-    CAM_INTF_PARM_QUERY_FLASH4SNAP,
-    CAM_INTF_PARM_EXPOSURE,
-    CAM_INTF_PARM_SHARPNESS,
-    CAM_INTF_PARM_CONTRAST,
-    CAM_INTF_PARM_SATURATION,
-    CAM_INTF_PARM_BRIGHTNESS,
-    CAM_INTF_PARM_ISO,
-    CAM_INTF_PARM_ZOOM, /* 20 */
-    CAM_INTF_PARM_ROLLOFF,
-    CAM_INTF_PARM_MODE,             /* camera mode */
-    CAM_INTF_PARM_AEC_ALGO_TYPE,    /* auto exposure algorithm */
-    CAM_INTF_PARM_FOCUS_ALGO_TYPE,  /* focus algorithm */
-    CAM_INTF_PARM_AEC_ROI,
-    CAM_INTF_PARM_AF_ROI,
-    CAM_INTF_PARM_FOCUS_MODE,
-    CAM_INTF_PARM_SCE_FACTOR,
-    CAM_INTF_PARM_FD,
-    CAM_INTF_PARM_MCE, /* 30 */
-    CAM_INTF_PARM_HFR,
-    CAM_INTF_PARM_REDEYE_REDUCTION,
-    CAM_INTF_PARM_WAVELET_DENOISE,
-    CAM_INTF_PARM_HISTOGRAM,
-    CAM_INTF_PARM_ASD_ENABLE,
-    CAM_INTF_PARM_RECORDING_HINT,
-    CAM_INTF_PARM_HDR,
-    CAM_INTF_PARM_MAX_DIMENSION,
-    CAM_INTF_PARM_RAW_DIMENSION,
-    CAM_INTF_PARM_FRAMESKIP,
-    CAM_INTF_PARM_ZSL_MODE,  /* indicating if it's running in ZSL mode */
-    CAM_INTF_PARM_HDR_NEED_1X, /* if HDR needs 1x output */ /* 40 */
-    CAM_INTF_PARM_LOCK_CAF,
-    CAM_INTF_PARM_VIDEO_HDR,
-    CAM_INTF_PARM_ROTATION,
-    CAM_INTF_PARM_SCALE,
-    CAM_INTF_PARM_VT, /* indicating if it's a Video Call Apllication */
-    CAM_INTF_META_CROP_DATA,
-    CAM_INTF_META_PREP_SNAPSHOT_DONE,
-    CAM_INTF_META_GOOD_FRAME_IDX_RANGE,
-    CAM_INTF_PARM_GET_CHROMATIX,
-    CAM_INTF_PARM_SET_RELOAD_CHROMATIX,
-    CAM_INTF_PARM_SET_AUTOFOCUSTUNING,
-    CAM_INTF_PARM_GET_AFTUNE,
-    CAM_INTF_PARM_SET_RELOAD_AFTUNE,
-    CAM_INTF_PARM_SET_VFE_COMMAND,
-    CAM_INTF_PARM_SET_PP_COMMAND,
-    CAM_INTF_PARM_TINTLESS,
-
-    /* stream based parameters */
-    CAM_INTF_PARM_DO_REPROCESS,
-    CAM_INTF_PARM_SET_BUNDLE,
-    CAM_INTF_PARM_STREAM_FLIP,
-    CAM_INTF_PARM_GET_OUTPUT_CROP,
-
-    CAM_INTF_PARM_EZTUNE_CMD,
-
-    /* specific to HAL3 */
-    /* Whether the metadata maps to a valid frame number */
-    CAM_INTF_META_FRAME_NUMBER_VALID,
-    /* COLOR CORRECTION.*/
-    CAM_INTF_META_COLOR_CORRECT_MODE,
-    /* A transform matrix to chromatically adapt pixels in the CIE XYZ (1931)
-     * color space from the scene illuminant to the sRGB-standard D65-illuminant. */
-    CAM_INTF_META_COLOR_CORRECT_TRANSFORM, /* 50 */
-    /* CONTROL */
-//    CAM_INTF_META_REQUEST_ID,
-    /* A frame counter set by the framework. Must be maintained unchanged in
-     * output frame. */
-    CAM_INTF_META_FRAME_NUMBER,
-    /* Whether AE is currently updating the sensor exposure and sensitivity
-     * fields */
-    CAM_INTF_META_AEC_MODE,
-    /* List of areas to use for metering */
-    CAM_INTF_META_AEC_ROI,
-    /* Whether the HAL must trigger precapture metering.*/
-    CAM_INTF_META_AEC_PRECAPTURE_TRIGGER,
-    /* The ID sent with the latest CAMERA2_TRIGGER_PRECAPTURE_METERING call */
-    CAM_INTF_META_AEC_PRECAPTURE_ID,
-    /* Current state of AE algorithm */
-    CAM_INTF_META_AEC_STATE,
-    /* List of areas to use for focus estimation */
-    CAM_INTF_META_AF_ROI,
-    /* Whether the HAL must trigger autofocus. */
-    CAM_INTF_META_AF_TRIGGER,
-    /* Current state of AF algorithm */
-    CAM_INTF_META_AF_STATE,
-    /* The ID sent with the latest CAMERA2_TRIGGER_AUTOFOCUS call */
-    CAM_INTF_META_AF_TRIGGER_ID,
-    /* List of areas to use for illuminant estimation */
-    CAM_INTF_META_AWB_REGIONS,
-    /* Current state of AWB algorithm */
-    CAM_INTF_META_AWB_STATE,
-    /* Information to 3A routines about the purpose of this capture, to help
-     * decide optimal 3A strategy */
-    CAM_INTF_META_CAPTURE_INTENT,
-    /* Overall mode of 3A control routines. We need to have this parameter
-     * because not all android.control.* have an OFF option, for example,
-     * AE_FPS_Range, aePrecaptureTrigger */
-    CAM_INTF_META_MODE,
-    /* DEMOSAIC */
-    /* Controls the quality of the demosaicing processing */
-    CAM_INTF_META_DEMOSAIC,
-    /* EDGE */
-    /* Operation mode for edge enhancement */
-    CAM_INTF_META_EDGE,
-    /* Control the amount of edge enhancement applied to the images.*/
-    /* 1-10; 10 is maximum sharpening */
-    CAM_INTF_META_SHARPNESS_STRENGTH,
-    /* FLASH */
-    /* Power for flash firing/torch, 10 is max power; 0 is no flash. Linear */
-    CAM_INTF_META_FLASH_POWER,
-    /* Firing time of flash relative to start of exposure, in nanoseconds*/
-    CAM_INTF_META_FLASH_FIRING_TIME,
-    /* Current state of the flash unit */
-    CAM_INTF_META_FLASH_STATE,
-    /* GEOMETRIC */
-    /* Operating mode of geometric correction */
-    CAM_INTF_META_GEOMETRIC_MODE,
-    /* Control the amount of shading correction applied to the images */
-    CAM_INTF_META_GEOMETRIC_STRENGTH,
-    /* HOT PIXEL */
-    /* Set operational mode for hot pixel correction */
-    CAM_INTF_META_HOTPIXEL_MODE,
-    /* LENS */
-    /* Size of the lens aperture */
-    CAM_INTF_META_LENS_APERTURE,
-    /* State of lens neutral density filter(s) */
-    CAM_INTF_META_LENS_FILTERDENSITY,
-    /* Lens optical zoom setting */
-    CAM_INTF_META_LENS_FOCAL_LENGTH,
-    /* Distance to plane of sharpest focus, measured from frontmost surface
-     * of the lens */
-    CAM_INTF_META_LENS_FOCUS_DISTANCE,
-    /* The range of scene distances that are in sharp focus (depth of field) */
-    CAM_INTF_META_LENS_FOCUS_RANGE,
-    /* Whether optical image stabilization is enabled. */
-    CAM_INTF_META_LENS_OPT_STAB_MODE,
-    /* Current lens status */
-    CAM_INTF_META_LENS_STATE,
-    /* NOISE REDUCTION */
-    /* Mode of operation for the noise reduction algorithm */
-    CAM_INTF_META_NOISE_REDUCTION_MODE,
-   /* Control the amount of noise reduction applied to the images.
-    * 1-10; 10 is max noise reduction */
-    CAM_INTF_META_NOISE_REDUCTION_STRENGTH,
-    /* SCALER */
-    /* Top-left corner and width of the output region to select from the active
-     * pixel array */
-    CAM_INTF_META_SCALER_CROP_REGION,
-    /* SENSOR */
-    /* Duration each pixel is exposed to light, in nanoseconds */
-    CAM_INTF_META_SENSOR_EXPOSURE_TIME,
-    /* Duration from start of frame exposure to start of next frame exposure,
-     * in nanoseconds */
-    CAM_INTF_META_SENSOR_FRAME_DURATION,
-    /* Gain applied to image data. Must be implemented through analog gain only
-     * if set to values below 'maximum analog sensitivity'. */
-    CAM_INTF_META_SENSOR_SENSITIVITY,
-    /* Time at start of exposure of first row */
-    CAM_INTF_META_SENSOR_TIMESTAMP,
-    /* SHADING */
-    /* Quality of lens shading correction applied to the image data */
-    CAM_INTF_META_SHADING_MODE,
-    /* Control the amount of shading correction applied to the images.
-     * unitless: 1-10; 10 is full shading compensation */
-    CAM_INTF_META_SHADING_STRENGTH,
-    /* STATISTICS */
-    /* State of the face detector unit */
-    CAM_INTF_META_STATS_FACEDETECT_MODE,
-    /* Operating mode for histogram generation */
-    CAM_INTF_META_STATS_HISTOGRAM_MODE,
-    /* Operating mode for sharpness map generation */
-    CAM_INTF_META_STATS_SHARPNESS_MAP_MODE,
-    /* A 3-channel sharpness map, based on the raw sensor data,
-     * If only a monochrome sharpness map is supported, all channels
-     * should have the same data
-     */
-    CAM_INTF_META_STATS_SHARPNESS_MAP,
-
-    /* TONEMAP */
-    /* Table mapping blue input values to output values */
-    CAM_INTF_META_TONEMAP_CURVE_BLUE,
-    /* Table mapping green input values to output values */
-    CAM_INTF_META_TONEMAP_CURVE_GREEN,
-    /* Table mapping red input values to output values */
-    CAM_INTF_META_TONEMAP_CURVE_RED,
-    /* Tone map mode */
-    CAM_INTF_META_TONEMAP_MODE,
-    CAM_INTF_META_FLASH_MODE,
-    CAM_INTF_META_ASD_HDR_SCENE_DATA,
-    CAM_INTF_META_PRIVATE_DATA,
-    CAM_INTF_PARM_STATS_DEBUG_MASK,
-
-    CAM_INTF_PARM_MAX
+   CAM_INTF_PARM_QUERY_FLASH4SNAP,
+   CAM_INTF_PARM_EXPOSURE,
+   CAM_INTF_PARM_SHARPNESS,
+   CAM_INTF_PARM_CONTRAST,
+   CAM_INTF_PARM_SATURATION,
+   CAM_INTF_PARM_BRIGHTNESS,
+   CAM_INTF_PARM_WHITE_BALANCE,
+   CAM_INTF_PARM_ISO,
+   CAM_INTF_PARM_ZOOM,
+   CAM_INTF_PARM_ANTIBANDING,
+   CAM_INTF_PARM_EFFECT,
+   CAM_INTF_PARM_FPS_RANGE,
+   CAM_INTF_PARM_EXPOSURE_COMPENSATION,
+   CAM_INTF_PARM_LED_MODE,
+   CAM_INTF_PARM_ROLLOFF,
+   CAM_INTF_PARM_MODE,
+   CAM_INTF_PARM_AEC_ALGO_TYPE,
+   CAM_INTF_PARM_FOCUS_ALGO_TYPE,
+   CAM_INTF_PARM_AEC_ROI,
+   CAM_INTF_PARM_AF_ROI,
+   CAM_INTF_PARM_FOCUS_MODE,
+   CAM_INTF_PARM_BESTSHOT_MODE,
+   CAM_INTF_PARM_SCE_FACTOR,
+   CAM_INTF_PARM_FD,
+   CAM_INTF_PARM_AEC_LOCK,
+   CAM_INTF_PARM_AWB_LOCK,
+   CAM_INTF_PARM_MCE,
+   CAM_INTF_PARM_HFR,
+   CAM_INTF_PARM_REDEYE_REDUCTION,
+   CAM_INTF_PARM_WAVELET_DENOISE,
+   CAM_INTF_PARM_HISTOGRAM,
+   CAM_INTF_PARM_ASD_ENABLE,
+   CAM_INTF_PARM_RECORDING_HINT,
+   CAM_INTF_PARM_DIS_ENABLE,
+   CAM_INTF_PARM_HDR,
+   CAM_INTF_PARM_UPDATE_RAW,
+   field_38,
+   CAM_INTF_PARM_FRAMESKIP,
+   CAM_INTF_PARM_SAMSUNG_APP,
+   CAM_INTF_PARM_OCRAF_ENABLE,
+   CAM_INTF_PARM_OCRAF_WINDOW,
+   CAM_INTF_PARM_ZSL_MODE,
+   CAM_INTF_PARM_HDR_NEED_1X,
+   CAM_INTF_PARM_LOCK_CAF,
+   CAM_INTF_PARM_VIDEO_HDR,
+   CAM_INTF_PARM_VISION_MODE,
+   CAM_INTF_PARM_VISION_AE,
+   field_49,
+   field_50,
+   CAM_INTF_PARM_DO_REPROCESS,
+   CAM_INTF_PARM_SET_BUNDLE,
+   CAM_INTF_PARM_SHOT_MODE,
+   CAM_INTF_PARM_ANTISHAKE,
+   CAM_INTF_PARM_DUAL_MODE,
+   field_56,
+   CAM_INTF_PARM_LLV,
+   CAM_INTF_PARM_FIRMWARE_MODE,
+   field_59,
+   CAM_INTF_PARM_SAMSUNG_0,
+   CAM_INTF_PARM_SAMSUNG_1,
+   CAM_INTF_PARM_SAMSUNG_2,
+   CAM_INTF_PARM_SAMSUNG_3,
+   CAM_INTF_PARM_SAMSUNG_4,
+   CAM_INTF_PARM_SAMSUNG_5,
+   CAM_INTF_PARM_SAMSUNG_6,
+   CAM_INTF_PARM_SAMSUNG_7,
+   CAM_INTF_PARM_SAMSUNG_8,
+   CAM_INTF_PARM_SAMSUNG_9,
+   CAM_INTF_PARM_SAMSUNG_10,
+   CAM_INTF_PARM_MAX
 } cam_intf_parm_type_t;
 
 typedef struct {
@@ -1304,9 +1136,7 @@ typedef struct {
     cam_rotation_t rotation;
     uint32_t flip;
     int32_t sharpness;
-    int32_t effect;
-    cam_hdr_param_t hdr_param;
-    cam_scale_param_t scale_param;
+    int32_t hdr_need_1x; /* when CAM_QCOM_FEATURE_HDR enabled, indicate if 1x is needed for output */
 } cam_pp_feature_config_t;
 
 typedef struct {

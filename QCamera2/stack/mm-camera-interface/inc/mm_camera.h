@@ -1,4 +1,4 @@
-/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2014, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,7 +33,7 @@
 #include <cam_semaphore.h>
 
 #include "mm_camera_interface.h"
-#include <hardware/camera.h>
+
 /**********************************************************************************
 * Data structure declare
 ***********************************************************************************/
@@ -48,6 +48,8 @@
 #define MM_CAMERA_DEV_OPEN_TRIES 2
 #define MM_CAMERA_DEV_OPEN_RETRY_SLEEP 20
 
+#define MM_CAMERA_POST_FLASH_PREVIEW_SKIP_CNT 3
+
 #ifndef TRUE
 #define TRUE 1
 #endif
@@ -55,6 +57,8 @@
 #ifndef FALSE
 #define FALSE 0
 #endif
+
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 
 struct mm_channel;
 struct mm_stream;
@@ -69,6 +73,8 @@ typedef enum
     MM_CAMERA_CMD_TYPE_SUPER_BUF_DATA_CB,    /* superbuf dataB CMD */
     MM_CAMERA_CMD_TYPE_CONFIG_NOTIFY, /* configure notify mode */
     MM_CAMERA_CMD_TYPE_FLUSH_QUEUE, /* flush queue */
+    MM_CAMERA_CMD_TYPE_UNPREPARE_SNAPSHOT_ZSL, /* stop snapshot zsl */
+    MM_CAMERA_CMD_TYPE_GENERAL,  /* general cmd */
     MM_CAMERA_CMD_TYPE_MAX
 } mm_camera_cmdcb_type_t;
 
@@ -82,6 +88,19 @@ typedef struct {
     uint32_t num_buf_requested;
 } mm_camera_req_buf_t;
 
+typedef enum {
+    MM_CAMERA_GENERIC_CMD_TYPE_AE_BRACKETING,
+    MM_CAMERA_GENERIC_CMD_TYPE_AF_BRACKETING,
+    MM_CAMERA_GENERIC_CMD_TYPE_FLASH_BRACKETING,
+    MM_CAMERA_GENERIC_CMD_TYPE_MTF_BRACKETING,
+    MM_CAMERA_GENERIC_CMD_TYPE_ZOOM_1X,
+} mm_camera_generic_cmd_type_t;
+
+typedef struct {
+    mm_camera_generic_cmd_type_t type;
+    uint32_t payload[32];
+} mm_camera_generic_cmd_t;
+
 typedef struct {
     mm_camera_cmdcb_type_t cmd_type;
     union {
@@ -91,6 +110,7 @@ typedef struct {
         mm_camera_req_buf_t req_buf; /* num of buf requested */
         uint32_t frame_idx; /* frame idx boundary for flush superbuf queue*/
         mm_camera_super_buf_notify_mode_t notify_mode; /* notification mode */
+        mm_camera_generic_cmd_t gen_cmd;
     } u;
 } mm_camera_cmdcb_t;
 
@@ -247,13 +267,21 @@ typedef enum {
     MM_CHANNEL_EVT_REQUEST_SUPER_BUF,
     MM_CHANNEL_EVT_CANCEL_REQUEST_SUPER_BUF,
     MM_CHANNEL_EVT_FLUSH_SUPER_BUF_QUEUE,
-    MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE,
+    MM_CHANNEL_EVT_CONFIG_NOTIFY_MODE, // no idea maybe something for notify requests???
+    MM_CHANNEL_EVT_UNPREPARE_SNAPSHOT_ZSL, // Pre kitkat zsl stuff
     MM_CHANNEL_EVT_MAP_STREAM_BUF,
     MM_CHANNEL_EVT_UNMAP_STREAM_BUF,
     MM_CHANNEL_EVT_SET_STREAM_PARM,
     MM_CHANNEL_EVT_GET_STREAM_PARM,
     MM_CHANNEL_EVT_DO_STREAM_ACTION,
     MM_CHANNEL_EVT_DELETE,
+    MM_CHANNEL_EVT_AF_BRACKETING,
+    MM_CHANNEL_EVT_AE_BRACKETING,
+    MM_CHANNEL_EVT_FLASH_BRACKETING,
+    MM_CHANNEL_EVT_MTF_BRACKETING,
+    MM_CHANNEL_EVT_ZOOM_1X,
+    MM_CHANNEL_EVT_START_ZSL_SNAPSHOT,
+    MM_CHANNEL_EVT_STOP_ZSL_SNAPSHOT,
 } mm_channel_evt_type_t;
 
 typedef struct {
@@ -277,7 +305,7 @@ typedef struct {
     uint32_t buf_idx;
     int32_t plane_idx;
     int fd;
-    uint32_t size;
+    size_t size;
 } mm_evt_paylod_map_stream_buf_t;
 
 typedef struct {
@@ -302,6 +330,7 @@ typedef struct {
     mm_camera_channel_attr_t attr;
     uint32_t expected_frame_id;
     uint32_t match_cnt;
+    uint32_t expected_frame_id_without_led;
 } mm_channel_queue_t;
 
 typedef struct {
@@ -340,9 +369,22 @@ typedef struct mm_channel {
     /* reference to parent cam_obj */
     struct mm_camera_obj* cam_obj;
 
+    //TODO
+    /* manual zsl snapshot control */
+    uint8_t manualZSLSnapshot;
+    //TODO END
+
     /* control for zsl led */
     uint8_t startZSlSnapshotCalled;
     uint8_t needLEDFlash;
+    //TODO
+    uint8_t previewSkipCnt;
+
+    uint8_t need3ABracketing;
+    uint8_t isFlashBracketingEnabled;
+    uint8_t isZoom1xFrameRequested;
+    //TODO END
+
 } mm_channel_t;
 
 /* struct to store information about pp cookie*/
@@ -367,6 +409,9 @@ typedef struct {
 } mm_camera_evt_obj_t;
 
 typedef struct mm_camera_obj {
+
+    pthread_mutex_t samsung; // needs to be locked before calling capabilities
+
     uint32_t my_hdl;
     int ref_count;
     int32_t ctrl_fd;
@@ -390,7 +435,6 @@ typedef struct {
     int8_t num_cam;
     char video_dev_name[MM_CAMERA_MAX_NUM_SENSORS][MM_CAMERA_DEV_NAME_LEN];
     mm_camera_obj_t *cam_obj[MM_CAMERA_MAX_NUM_SENSORS];
-    struct camera_info info[MM_CAMERA_MAX_NUM_SENSORS];
 } mm_camera_ctrl_t;
 
 /**********************************************************************************

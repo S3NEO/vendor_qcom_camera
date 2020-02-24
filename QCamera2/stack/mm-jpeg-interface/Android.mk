@@ -20,25 +20,11 @@ ifeq ($(strip $(TARGET_USES_ION)),true)
     LOCAL_CFLAGS += -DUSE_ION
 endif
 
-
-ifeq ($(call is-board-platform-in-list, msm8974),true)
-    LOCAL_CFLAGS+= -DMM_JPEG_CONCURRENT_SESSIONS_COUNT=2
-else
-    LOCAL_CFLAGS+= -DMM_JPEG_CONCURRENT_SESSIONS_COUNT=1
-endif
-
-ifeq ($(call is-board-platform-in-list, msm8610),true)
-    LOCAL_CFLAGS+= -DLOAD_ADSP_RPC_LIB
-endif
-
 LOCAL_SRC_FILES := \
     src/mm_jpeg_queue.c \
     src/mm_jpeg_exif.c \
     src/mm_jpeg.c \
-    src/mm_jpeg_interface.c \
-    src/mm_jpeg_ionbuf.c \
-    src/mm_jpegdec_interface.c \
-    src/mm_jpegdec.c
+    src/mm_jpeg_interface.c
 
 LOCAL_MODULE           := libmmjpeg_interface
 LOCAL_PRELINK_MODULE   := false

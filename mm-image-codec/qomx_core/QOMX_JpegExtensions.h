@@ -55,8 +55,6 @@ typedef enum {
 #define QOMX_IMAGE_EXT_BUFFER_OFFSET_NAME "OMX.QCOM.image.exttype.bufferOffset"
 #define QOMX_IMAGE_EXT_MOBICAT_NAME            "OMX.QCOM.image.exttype.mobicat"
 #define QOMX_IMAGE_EXT_ENCODING_MODE_NAME        "OMX.QCOM.image.encoding.mode"
-#define QOMX_IMAGE_EXT_WORK_BUFFER_NAME      "OMX.QCOM.image.exttype.workbuffer"
-#define QOMX_IMAGE_EXT_METADATA_NAME      "OMX.QCOM.image.exttype.metadata"
 
 /** QOMX_IMAGE_EXT_INDEXTYPE
 *  This enum is an extension of the OMX_INDEXTYPE enum and
@@ -80,12 +78,6 @@ typedef enum {
 
   //Name: OMX.QCOM.image.encoding.approach
   QOMX_IMAGE_EXT_ENCODING_MODE = 0x07F00004,
-
-  //Name: OMX.QCOM.image.exttype.workbuffer
-  QOMX_IMAGE_EXT_WORK_BUFFER = 0x07F00005,
-
-  //Name: OMX.QCOM.image.exttype.metadata
-  QOMX_IMAGE_EXT_METADATA = 0x07F00008,
 
 } QOMX_IMAGE_EXT_INDEXTYPE;
 
@@ -176,7 +168,6 @@ typedef struct {
   OMX_U32 output_width;
   OMX_U32 output_height;
   QOMX_YUV_FRAME_INFO tmbOffset;
-  OMX_U32 rotation;
 } QOMX_THUMBNAIL_INFO;
 
 /**qomx_mobicat
@@ -188,27 +179,6 @@ typedef struct {
   OMX_U8 *mobicatData;
   OMX_U32 mobicatDataLength;
 } QOMX_MOBICAT;
-
-/**qomx_workbuffer
-*  Ion buffer to be used for the H/W encoder
-*  @fd - FD of the buffer allocated
-*  @vaddr - Buffer address
-*  @length - Buffer length
-**/
-typedef struct {
-  int fd;
-  uint8_t *vaddr;
-  uint32_t length;
-} QOMX_WORK_BUFFER;
-
-/**QOMX_METADATA
- *
- * meta data to be set in EXIF
- */
-typedef struct {
-  OMX_U8  *metadata;
-  OMX_U32 metaPayloadSize;
-} QOMX_METADATA;
 
 /** QOMX_IMG_COLOR_FORMATTYPE
 *  This enum is an extension of the OMX_COLOR_FORMATTYPE enum.

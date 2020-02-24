@@ -43,7 +43,7 @@
 
 static pthread_mutex_t g_intf_lock = PTHREAD_MUTEX_INITIALIZER;
 
-static mm_camera_ctrl_t g_cam_ctrl = {0, {{0}}, {0}, {{0}}};
+static mm_camera_ctrl_t g_cam_ctrl = {0, {{0}}, {0}};
 
 static pthread_mutex_t g_handler_lock = PTHREAD_MUTEX_INITIALIZER;
 static uint16_t g_handler_history_count = 0; /* history count for handler */
@@ -329,6 +329,26 @@ static int32_t mm_camera_intf_prepare_snapshot(uint32_t camera_handle,
         pthread_mutex_unlock(&g_intf_lock);
     }
     return rc;
+}
+
+/*===========================================================================
+ * FUNCTION   : mm_camera_intf_unprepare_snapshot
+ *
+ * DESCRIPTION: unprepare hardware for snapshot
+ *
+ * PARAMETERS :
+ *   @camera_handle: camera handle
+ *   @do_af_flag   : flag indicating if AF is needed
+ *
+ * RETURN     : int32_t type of status
+ *              0  -- success
+ *              -1 -- failure
+ *==========================================================================*/
+static int32_t mm_camera_intf_unprepare_snapshot(uint32_t camera_handle,
+                                               int32_t do_af_flag)
+{
+	CDBG_ERROR("%s: not yet implemented, camera_handle(%d), do_af_flag(%d)", __func__, camera_handle, do_af_flag);
+	return -1;
 }
 
 /*===========================================================================
@@ -1174,93 +1194,6 @@ static int32_t mm_camera_intf_unmap_stream_buf(uint32_t camera_handle,
 }
 
 /*===========================================================================
- * FUNCTION   : get_sensor_info
- *
- * DESCRIPTION: get sensor info like facing(back/front) and mount angle
- *
- * PARAMETERS :
- *
- * RETURN     :
- *==========================================================================*/
-void get_sensor_info()
-{
-    int rc = 0;
-    int dev_fd = 0;
-    struct media_device_info mdev_info;
-    int num_media_devices = 0;
-    uint8_t num_cameras = 0;
-
-    CDBG("%s : E", __func__);
-    /* lock the mutex */
-    while (1) {
-        char dev_name[32];
-        int num_entities;
-        snprintf(dev_name, sizeof(dev_name), "/dev/media%d", num_media_devices);
-        dev_fd = open(dev_name, O_RDWR | O_NONBLOCK);
-        if (dev_fd <= 0) {
-            CDBG("Done discovering media devices\n");
-            break;
-        }
-        num_media_devices++;
-        memset(&mdev_info, 0, sizeof(mdev_info));
-        rc = ioctl(dev_fd, MEDIA_IOC_DEVICE_INFO, &mdev_info);
-        if (rc < 0) {
-            CDBG_ERROR("Error: ioctl media_dev failed: %s\n", strerror(errno));
-            close(dev_fd);
-            dev_fd = 0;
-            num_cameras = 0;
-            break;
-        }
-
-        if(strncmp(mdev_info.model,  MSM_CONFIGURATION_NAME, sizeof(mdev_info.model)) != 0) {
-            close(dev_fd);
-            dev_fd = 0;
-            continue;
-        }
-
-        num_entities = 1;
-        while (1) {
-            struct media_entity_desc entity;
-            unsigned long temp;
-            unsigned int mount_angle;
-            unsigned int facing;
-
-            memset(&entity, 0, sizeof(entity));
-            entity.id = num_entities++;
-            rc = ioctl(dev_fd, MEDIA_IOC_ENUM_ENTITIES, &entity);
-            if (rc < 0) {
-                CDBG("Done enumerating media entities\n");
-                rc = 0;
-                break;
-            }
-            if(entity.type == MEDIA_ENT_T_V4L2_SUBDEV &&
-                entity.group_id == MSM_CAMERA_SUBDEV_SENSOR) {
-                temp = entity.flags;
-                mount_angle = (temp & 0xFF) * 90;
-                facing = (temp >> 8);
-                ALOGD("index = %d flag = %x mount_angle = %d facing = %d\n"
-                    , num_cameras, (unsigned int)temp, (unsigned int)mount_angle,
-                    (unsigned int)facing);
-                g_cam_ctrl.info[num_cameras].facing = facing;
-                g_cam_ctrl.info[num_cameras].orientation = mount_angle;
-                num_cameras++;
-                continue;
-            }
-        }
-
-        CDBG("%s: dev_info[id=%d,name='%s']\n",
-            __func__, num_cameras, g_cam_ctrl.video_dev_name[num_cameras]);
-
-        close(dev_fd);
-        dev_fd = 0;
-    }
-
-    /* unlock the mutex */
-    CDBG("%s: num_cameras=%d\n", __func__, g_cam_ctrl.num_cam);
-    return;
-}
-
-/*===========================================================================
  * FUNCTION   : get_num_of_cameras
  *
  * DESCRIPTION: get number of cameras
@@ -1269,6 +1202,10 @@ void get_sensor_info()
  *
  * RETURN     : number of cameras supported
  *==========================================================================*/
+
+#define SAMSUNG_MAGIC_ENTITY_TYPE 65537
+#define SAMSUNG_MAGIC_GROUP_ID 2
+
 uint8_t get_num_of_cameras()
 {
     int rc = 0;
@@ -1276,13 +1213,82 @@ uint8_t get_num_of_cameras()
     struct media_device_info mdev_info;
     int num_media_devices = 0;
     uint8_t num_cameras = 0;
+    char subdev_name[32];
+    int32_t sd_fd = 0;
 
     CDBG("%s : E", __func__);
     /* lock the mutex */
     pthread_mutex_lock(&g_intf_lock);
     while (1) {
+        uint32_t num_entities = 1U;
         char dev_name[32];
-        int num_entities;
+
+        snprintf(dev_name, sizeof(dev_name), "/dev/media%d", num_media_devices);
+        dev_fd = open(dev_name, O_RDWR | O_NONBLOCK);
+        if (dev_fd < 0) {
+            CDBG_ERROR("Done discovering media devices\n");
+            break;
+        }
+        num_media_devices++;
+        rc = ioctl(dev_fd, MEDIA_IOC_DEVICE_INFO, &mdev_info);
+        if (rc < 0) {
+            CDBG_ERROR("Error: ioctl media_dev failed: %s\n", strerror(errno));
+            close(dev_fd);
+            dev_fd = 0;
+            break;
+        }
+
+        if (strncmp(mdev_info.model, "msm_cam_dummy", sizeof(mdev_info.model) != 0)) {
+            close(dev_fd);
+            dev_fd = 0;
+            continue;
+        }
+
+        while (1) {
+            struct media_entity_desc entity;
+            memset(&entity, 0, sizeof(entity));
+            entity.id = num_entities++;
+            CDBG_ERROR("entity id %d", entity.id);
+            rc = ioctl(dev_fd, MEDIA_IOC_ENUM_ENTITIES, &entity);
+            if (rc < 0) {
+                CDBG_ERROR("Done enumerating media entities");
+                rc = 0;
+                break;
+            }
+            CDBG_ERROR("entity name %s type %d group id %d",
+                entity.name, entity.type, entity.group_id);
+            if (entity.type == SAMSUNG_MAGIC_ENTITY_TYPE &&
+                entity.group_id == SAMSUNG_MAGIC_GROUP_ID) {
+		CDBG_ERROR("WE GOT A MATCH!!!");
+		sd_fd = open(subdev_name, O_RDWR);
+    		if (sd_fd < 0) {
+        		CDBG_ERROR("%s: Open sensor_init subdev failed", __func__);
+			CDBG_ERROR("Doesnt open anyway XD!!!");
+    		}
+    		close(sd_fd);
+                snprintf(subdev_name, sizeof(dev_name), "/dev/%s", entity.name);
+                break;
+            }
+        }
+        close(dev_fd);
+        dev_fd = 0;
+    }
+
+    /* Open sensor_init subdev */
+    sd_fd = open(subdev_name, O_RDWR);
+    if (sd_fd < 0) {
+        CDBG_ERROR("%s: Open sensor_init subdev failed", __func__);
+        return FALSE;
+    }
+    close(sd_fd);
+
+    dev_fd = 0;
+
+    num_media_devices = 0;
+    while (1) {
+        uint32_t num_entities = 1U;
+        char dev_name[32];
+
         snprintf(dev_name, sizeof(dev_name), "/dev/media%d", num_media_devices);
         dev_fd = open(dev_name, O_RDWR | O_NONBLOCK);
         if (dev_fd <= 0) {
@@ -1333,17 +1339,12 @@ uint8_t get_num_of_cameras()
     }
     g_cam_ctrl.num_cam = num_cameras;
 
-    get_sensor_info();
     /* unlock the mutex */
     pthread_mutex_unlock(&g_intf_lock);
     CDBG("%s: num_cameras=%d\n", __func__, g_cam_ctrl.num_cam);
     return g_cam_ctrl.num_cam;
 }
 
-struct camera_info *get_cam_info(int camera_id)
-{
-    return &g_cam_ctrl.info[camera_id];
-}
 /* camera ops v-table */
 static mm_camera_ops_t mm_camera_ops = {
     .query_capability = mm_camera_intf_query_capability,
@@ -1354,6 +1355,7 @@ static mm_camera_ops_t mm_camera_ops = {
     .do_auto_focus = mm_camera_intf_do_auto_focus,
     .cancel_auto_focus = mm_camera_intf_cancel_auto_focus,
     .prepare_snapshot = mm_camera_intf_prepare_snapshot,
+    .unprepare_snapshot = mm_camera_intf_unprepare_snapshot,
     .map_buf = mm_camera_intf_map_buf,
     .unmap_buf = mm_camera_intf_unmap_buf,
     .add_channel = mm_camera_intf_add_channel,

@@ -67,7 +67,6 @@ public:
     uint8_t getNumOfStreams() const {return m_numStreams;};
     QCameraStream *getStreamByIndex(uint8_t index);
     QCameraStream *getStreamByServerID(uint32_t serverID);
-    int32_t UpdateStreamBasedParameters(QCameraParameters &param);
 
 protected:
     uint32_t m_camHandle;
@@ -118,8 +117,9 @@ public:
                                        QCameraChannel *pSrcChannel,
                                        uint8_t minStreamBufNum,
                                        cam_padding_info_t *paddingInfo,
-                                       QCameraParameters &param,
-                                       bool contStream);
+				       bool mLongshotEnabled,
+				       stream_cb_routine stream_cb,
+				       void *userdata);
     // online reprocess
     int32_t doReprocess(mm_camera_super_buf_t *frame);
     // offline reprocess
