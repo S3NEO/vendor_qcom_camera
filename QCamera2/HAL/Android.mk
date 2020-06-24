@@ -34,14 +34,15 @@ LOCAL_C_INCLUDES := \
         frameworks/native/include/media/hardware \
         frameworks/native/include/media/openmax \
         hardware/qcom/display/libgralloc \
-        hardware/qcom/media-caf-new/libstagefrighthw \
+        hardware/qcom/media-caf/msm8226/libstagefrighthw \
         $(LOCAL_PATH)/../../mm-image-codec/qexif \
         $(LOCAL_PATH)/../../mm-image-codec/qomx_core \
-	$(LOCAL_PATH)/../util
+	$(LOCAL_PATH)/../util \
+	system/media/camera/include
 
 ifneq ($(filter msm8974 msm8x74 msm8226,$(TARGET_BOARD_PLATFORM)),)
 LOCAL_C_INCLUDES += \
-        hardware/qcom/display-caf-new/libgralloc
+        hardware/qcom/display-caf/msm8226/libgralloc
 else
 LOCAL_C_INCLUDES += \
         hardware/qcom/display/msm8960/libgralloc
@@ -55,7 +56,7 @@ LOCAL_SHARED_LIBRARIES := libcamera_client liblog libhardware libutils libcutils
 LOCAL_SHARED_LIBRARIES += libmmcamera_interface libmmjpeg_interface
 
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_MODULE := camera.$(TARGET_BOARD_PLATFORM)
+LOCAL_MODULE := camera.vendor.$(TARGET_BOARD_PLATFORM)
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)

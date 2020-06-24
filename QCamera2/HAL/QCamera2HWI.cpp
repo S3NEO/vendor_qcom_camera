@@ -1545,6 +1545,8 @@ QCameraHeapMemory *QCamera2HardwareInterface::allocateStreamInfoBuf(
     cam_stream_type_t stream_type)
 {
     int rc = NO_ERROR;
+    char value[PROPERTY_VALUE_MAX];
+    bool raw_yuv = false;
 
     QCameraHeapMemory *streamInfoBuf = new QCameraHeapMemory(QCAMERA_ION_USE_CACHE);
     if (!streamInfoBuf) {
@@ -1570,6 +1572,13 @@ QCameraHeapMemory *QCamera2HardwareInterface::allocateStreamInfoBuf(
     switch (stream_type) {
     case CAM_STREAM_TYPE_SNAPSHOT:
     case CAM_STREAM_TYPE_RAW:
+	property_get("persist.camera.raw_yuv", value, "0");
+        raw_yuv = atoi(value) > 0 ? true : false;
+
+	if (mParameters.isZSLMode() && raw_yuv) {
+		ALOGE("raw_yuv enabled...");
+	}
+
         if (mParameters.isZSLMode() && mParameters.getRecordingHintValue() != true) {
             streamInfo->streaming_mode = CAM_STREAMING_MODE_CONTINUOUS;
         } else {

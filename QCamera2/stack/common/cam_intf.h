@@ -93,7 +93,7 @@ typedef struct{
 
     /* supported effect modes */
     uint8_t supported_effects_cnt;
-    cam_effect_mode_type supported_effects[12];
+    cam_effect_mode_type supported_effects[CAM_EFFECT_MODE_MAX];
 
     char field_ED8[20];
 
@@ -156,25 +156,26 @@ typedef struct{
     cam_control_range_t saturation_ctrl;  /* saturation */
     cam_control_range_t sce_ctrl;         /* skintone enhancement factor */
 
-    char field_107C[40];		  /* cam_hdr_bracketing_info_t */
+    /* QCOM HDR specific control. Indicates number of frames and exposure needs for the frames */
+    cam_hdr_bracketing_info_t hdr_bracketing_setting;
 
     uint32_t qcom_supported_feature_mask; /* mask of qcom specific features supported:
                                            * such as CAM_QCOM_FEATURE_SUPPORTED_FACE_DETECTION*/
     cam_padding_info_t padding_info;      /* padding information from PP */
 
-    char field_10B1;
-    char field_10B2;
-    char field_10B3;
-
     int8_t min_num_hdr_bufs;		  /* minimum number of buffers needed by hdr module */
     int8_t min_num_pp_bufs;               /* minimum number of buffers needed by postproc module */
-
-    char field_10B6;
-    char field_10B7;
 
     uint32_t min_required_pp_mask;        /* min required pp feature masks for ZSL.
                                            * depends on hardware limitation, i.e. for 8974,
                                            * sharpness is required for all ZSL snapshot frames */
+
+    char field_10B1;
+    char field_10B2;
+    char field_10B3;
+
+    char field_10B6;
+    char field_10B7;
 
     int used_10BC;
     int used_10C0;
@@ -206,6 +207,12 @@ typedef struct {
         cam_bundle_config_t bundleInfo; /* set bundle info*/
     };
 } cam_stream_parm_buffer_t;
+
+typedef struct {
+    int something;
+    int something1;
+    int something2;
+} cam_stream_extra_buffer_t;
 
 /* stream info */
 typedef struct {
@@ -243,6 +250,8 @@ typedef struct {
     cam_stream_reproc_config_t reprocess_config;
 
     cam_stream_parm_buffer_t parm_buf;    /* stream based parameters */
+
+    cam_stream_extra_buffer_t samsung_buf;
 } cam_stream_info_t;
 
 /*****************************************************************************
